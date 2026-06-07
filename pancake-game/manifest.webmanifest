@@ -1,0 +1,25 @@
+{
+  "name": "Little Chef Aria: Pancakes",
+  "short_name": "Aria Pancakes",
+  "description": "A gentle touch-only pancake cooking game for toddlers.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff3f7",
+  "theme_color": "#ff8fb1",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
