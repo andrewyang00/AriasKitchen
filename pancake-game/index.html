@@ -47,22 +47,20 @@
       <div class="screen-header">
         <div class="aria-portrait aria-portrait--small" id="ariaSelect"></div>
         <div class="prompt-bubble">
-          <span class="prompt-icon" aria-hidden="true">🥞</span>
-          <span class="prompt-icon prompt-icon--arrow" aria-hidden="true">👉</span>
+          <img class="prompt-icon-img" src="assets/images/pancake_golden.png" alt="" aria-hidden="true">
+          <img class="prompt-icon-img prompt-icon-img--nudge" src="assets/images/tap_indicator.png" alt="" aria-hidden="true">
         </div>
       </div>
       <div class="recipe-grid">
         <button class="recipe-card recipe-card--active" id="recipePancakes" type="button" aria-label="Make pancakes">
-          <span class="recipe-emoji" aria-hidden="true">🥞</span>
+          <img class="recipe-glyph-img" src="assets/images/pancake_golden.png" alt="" aria-hidden="true">
           <span class="recipe-glow" aria-hidden="true"></span>
         </button>
         <button class="recipe-card recipe-card--locked" data-locked="true" type="button" aria-label="More recipes coming soon">
-          <span class="recipe-emoji" aria-hidden="true">🍪</span>
-          <span class="recipe-lock" aria-hidden="true">✨</span>
+          <img class="recipe-glyph-img recipe-glyph-img--star" src="assets/images/star_empty.png" alt="" aria-hidden="true">
         </button>
         <button class="recipe-card recipe-card--locked" data-locked="true" type="button" aria-label="More recipes coming soon">
-          <span class="recipe-emoji" aria-hidden="true">🍲</span>
-          <span class="recipe-lock" aria-hidden="true">✨</span>
+          <img class="recipe-glyph-img recipe-glyph-img--star" src="assets/images/star_empty.png" alt="" aria-hidden="true">
         </button>
       </div>
     </section>
@@ -70,11 +68,12 @@
     <!-- ============================= EGGS ============================== -->
     <section class="screen" data-screen="EGGS">
       <div class="prompt-bubble">
-        <span class="prompt-icon" aria-hidden="true">🥚</span>
-        <span class="prompt-icon" aria-hidden="true">🥚</span>
-        <span class="prompt-icon prompt-icon--tap" aria-hidden="true">👆</span>
+        <img class="prompt-icon-img" src="assets/images/egg_whole.png" alt="" aria-hidden="true">
+        <img class="prompt-icon-img" src="assets/images/egg_whole.png" alt="" aria-hidden="true">
+        <img class="prompt-icon-img prompt-icon-img--nudge" src="assets/images/tap_indicator.png" alt="" aria-hidden="true">
       </div>
       <div class="stage stage--eggs">
+        <div class="counter-surface" aria-hidden="true"></div>
         <div class="aria-portrait aria-portrait--stage" id="ariaEggs"></div>
         <div class="egg-row" id="eggRow"><!-- egg targets injected by app.js --></div>
         <div class="bowl-wrap grounded-shadow">
@@ -87,13 +86,14 @@
     <!-- ============================= MILK ============================== -->
     <section class="screen" data-screen="MILK">
       <div class="prompt-bubble">
-        <span class="prompt-icon" aria-hidden="true">🥛</span>
-        <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
+        <img class="prompt-icon-img" src="assets/images/milk_carton.png" alt="" aria-hidden="true">
+        <img class="prompt-icon-img prompt-icon-img--nudge" src="assets/images/hold_indicator.png" alt="" aria-hidden="true">
       </div>
       <div class="stage stage--milk">
+        <div class="counter-surface" aria-hidden="true"></div>
         <div class="aria-portrait aria-portrait--stage" id="ariaMilk"></div>
         <button class="hold-target carton grounded-shadow" id="milkCarton" type="button" aria-label="Hold to pour milk">
-          <span class="carton-emoji" aria-hidden="true">🥛</span>
+          <img class="carton-img" src="assets/images/milk_carton.png" alt="" aria-hidden="true">
           <span class="pour-stream" id="milkStream" aria-hidden="true"></span>
         </button>
         <div class="bowl-wrap grounded-shadow">
@@ -108,15 +108,16 @@
     <!-- ============================= STIR ============================== -->
     <section class="screen" data-screen="STIR">
       <div class="prompt-bubble">
-        <span class="prompt-icon prompt-icon--swirl" aria-hidden="true">🥄</span>
-        <span class="prompt-icon prompt-icon--swirl-arrow" aria-hidden="true">🔄</span>
+        <img class="prompt-icon-img prompt-icon-img--swirl" src="assets/images/spoon_wooden.png" alt="" aria-hidden="true">
+        <img class="prompt-icon-img prompt-icon-img--swirl-arrow" src="assets/images/drag_indicator.png" alt="" aria-hidden="true">
       </div>
       <div class="stage stage--stir">
+        <div class="counter-surface" aria-hidden="true"></div>
         <div class="aria-portrait aria-portrait--stage" id="ariaStir"></div>
         <div class="bowl-wrap bowl-wrap--big grounded-shadow" id="stirSurface">
           <div class="bowl-slot bowl-slot--big" id="bowlStirSlot"></div>
           <div class="swirl-trail" id="swirlTrail" aria-hidden="true"></div>
-          <div class="swirl-spoon" id="swirlSpoon" aria-hidden="true">🥄</div>
+          <img class="swirl-spoon" id="swirlSpoon" src="assets/images/spoon_wooden.png" alt="" aria-hidden="true">
         </div>
       </div>
       <div class="progress-dots" id="dotsStir" aria-hidden="true"></div>
@@ -125,13 +126,14 @@
     <!-- ============================ BATTER ============================= -->
     <section class="screen" data-screen="BATTER">
       <div class="prompt-bubble">
-        <span class="prompt-icon" aria-hidden="true">🥣</span>
-        <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
+        <img class="prompt-icon-img" src="assets/images/batter_pour.png" alt="" aria-hidden="true">
+        <img class="prompt-icon-img prompt-icon-img--nudge" src="assets/images/hold_indicator.png" alt="" aria-hidden="true">
       </div>
       <div class="stage stage--batter">
+        <div class="counter-surface" aria-hidden="true"></div>
         <div class="aria-portrait aria-portrait--stage" id="ariaBatter"></div>
         <button class="hold-target ladle grounded-shadow" id="batterLadle" type="button" aria-label="Hold to pour batter onto the pan">
-          <span class="ladle-emoji" aria-hidden="true">🥣</span>
+          <img class="ladle-img" src="assets/images/batter_pour.png" alt="" aria-hidden="true">
           <span class="pour-stream pour-stream--vertical" id="batterStream" aria-hidden="true"></span>
         </button>
         <div class="pan-wrap grounded-shadow">
@@ -145,9 +147,10 @@
     <section class="screen" data-screen="FLIP">
       <div class="prompt-bubble">
         <span class="prompt-icon prompt-icon--swipe" aria-hidden="true">⬆️</span>
-        <span class="prompt-icon" aria-hidden="true">🥞</span>
+        <img class="prompt-icon-img" src="assets/images/pancake_golden.png" alt="" aria-hidden="true">
       </div>
       <div class="stage stage--flip">
+        <div class="counter-surface" aria-hidden="true"></div>
         <div class="aria-portrait aria-portrait--stage" id="ariaFlip"></div>
         <div class="pan-wrap grounded-shadow" id="flipPanWrap">
           <div class="pan-slot" id="panFlipSlot"></div>

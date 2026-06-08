@@ -26,6 +26,14 @@ const ASSET_FILES = {
   pancakeRaw: 'pancake_raw.png',
   pancakeGolden: 'pancake_golden.png',
   pancakeStack: 'pancake_stack_reward.png',
+  milkCarton: 'milk_carton.png',
+  spoonWooden: 'spoon_wooden.png',
+  batterPour: 'batter_pour.png',
+  tapIndicator: 'tap_indicator.png',
+  holdIndicator: 'hold_indicator.png',
+  dragIndicator: 'drag_indicator.png',
+  starEmpty: 'star_empty.png',
+  countertop: 'countertop.png',
 };
 
 // Placeholder look for each slot: an emoji glyph + pastel background tint.
@@ -49,6 +57,14 @@ const PLACEHOLDER_LOOK = {
   pancakeRaw: { glyph: '🥞', tint: 'butter' },
   pancakeGolden: { glyph: '🥞', tint: 'golden' },
   pancakeStack: { glyph: '🥞', tint: 'golden' },
+  milkCarton: { glyph: '🥛', tint: 'cream' },
+  spoonWooden: { glyph: '🥄', tint: 'butter' },
+  batterPour: { glyph: '🥣', tint: 'butter' },
+  tapIndicator: { glyph: '👆', tint: 'pink' },
+  holdIndicator: { glyph: '✋', tint: 'pink' },
+  dragIndicator: { glyph: '🔄', tint: 'pink' },
+  starEmpty: { glyph: '✨', tint: 'pink' },
+  countertop: { glyph: '🪵', tint: 'cream' },
 };
 
 /**

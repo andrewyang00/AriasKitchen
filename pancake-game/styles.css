@@ -124,34 +124,57 @@ body {
   50% { transform: translateY(-0.5em); opacity: 1; }
 }
 
+/* Illustrated prompt icons (replace the old emoji glyphs so every cue matches
+   the storyboard's hand-drawn art style instead of clashing with it). */
+.prompt-icon-img {
+  width: clamp(42px, 10vmin, 78px);
+  height: clamp(42px, 10vmin, 78px);
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px var(--shadow));
+}
+.prompt-icon-img--nudge,
+.prompt-icon-img--swirl {
+  animation: nudge 1.6s ease-in-out infinite;
+}
+.prompt-icon-img--swirl-arrow {
+  animation: spin-nudge 1.8s linear infinite;
+}
+
 /* ------------------------------------------------------------- aria asset */
 
+/* Aria's art is cropped to a consistent ~4:5 portrait box (811x998) across
+   every pose — size by one dimension and let aspect-ratio derive the other
+   so she renders at her true visible proportions with no dead space, instead
+   of being squeezed into (and floating inside) a square frame. */
 .aria-portrait {
   width: clamp(120px, 30vmin, 260px);
-  height: clamp(120px, 30vmin, 260px);
+  aspect-ratio: 811 / 998;
 }
 
 .aria-portrait--small {
   width: clamp(84px, 18vmin, 150px);
-  height: clamp(84px, 18vmin, 150px);
+  aspect-ratio: 811 / 998;
 }
 
 .aria-portrait--celebrate {
   width: clamp(140px, 32vmin, 280px);
-  height: clamp(140px, 32vmin, 280px);
+  aspect-ratio: 811 / 998;
 }
 
-/* Aria stands at the counter's edge while the action happens center-stage —
-   absolutely positioned (and non-interactive) so she never competes with the
-   egg/bowl/pan/hold-target row for flex space or taps, just like the
-   storyboard composition (chef off to one side, props front and center). */
+/* Aria stands at the counter's edge, sized to feel like a real character in
+   the scene (matching the storyboard's proportions — she's the biggest thing
+   on screen besides the action itself) — absolutely positioned and
+   non-interactive so she never competes with the egg/bowl/pan/hold-target
+   row for flex space or taps. */
 .aria-portrait--stage {
   position: absolute;
-  left: clamp(0px, 1.4vmin, 12px);
-  bottom: 0;
-  width: clamp(92px, 21vmin, 180px);
-  height: clamp(92px, 21vmin, 180px);
+  left: clamp(-6px, 0.6vmin, 6px);
+  bottom: var(--counter-h, 0);
+  width: auto;
+  height: clamp(160px, 38vmin, 320px);
+  aspect-ratio: 811 / 998;
   pointer-events: none;
+  z-index: 1;
 }
 
 /* ------------------------------------------------------- grounding shadows */
@@ -174,6 +197,29 @@ body {
   border-radius: 50%;
   filter: blur(1.5px);
   pointer-events: none;
+}
+
+/* A literal counter shelf anchored along the bottom of every gameplay stage.
+   The photo behind it has its own counter, but at an angle and in a
+   different spot on every viewport — instead of chasing that perspective, we
+   give the scene its own honest, flat "work surface" (like a puppet stage
+   floor) that Aria, the bowls/pans/ingredients all visibly rest on, with
+   their contact shadows landing right on its edge. Sits behind the
+   interactive row (z-index: 0, raised above by the items' own z-index: 1). */
+.counter-surface {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(96%, 680px);
+  height: var(--counter-h, clamp(34px, 8vmin, 64px));
+  border-radius: 28px 28px 16px 16px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 35%),
+    linear-gradient(180deg, #fff6ec 0%, #ffe9d6 55%, #ffd9bd 100%);
+  border: 3px solid #fff;
+  box-shadow: 0 12px 24px rgba(140, 95, 55, 0.25);
+  z-index: 0;
 }
 
 .asset {
@@ -324,11 +370,18 @@ body {
   filter: saturate(0.6);
 }
 
-.recipe-lock {
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  font-size: 0.4em;
+/* Illustrated glyphs for the recipe cards (replace the old food emoji, which
+   didn't even depict real choices — "coming soon" cards now show a soft
+   illustrated star instead of a random cookie/soup glyph). */
+.recipe-glyph-img {
+  width: clamp(72px, 17vmin, 130px);
+  height: clamp(72px, 17vmin, 130px);
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px var(--shadow));
+}
+.recipe-glyph-img--star {
+  width: clamp(50px, 12vmin, 92px);
+  height: clamp(50px, 12vmin, 92px);
 }
 
 /* ----------------------------------------------------------------- stages */
@@ -341,12 +394,16 @@ body {
   gap: clamp(16px, 5vmin, 56px);
   flex-wrap: wrap;
   width: 100%;
+  --counter-h: clamp(34px, 8vmin, 64px);
+  padding-bottom: var(--counter-h);
 }
 
 /* Eggs */
 .egg-row {
   display: flex;
   gap: clamp(18px, 5vmin, 48px);
+  position: relative;
+  z-index: 1;
 }
 
 .egg {
@@ -355,7 +412,7 @@ body {
   background: transparent;
   padding: 0;
   width: clamp(96px, 20vmin, 160px);
-  height: clamp(112px, 23vmin, 188px);
+  aspect-ratio: 470 / 597;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -401,12 +458,13 @@ body {
 /* Bowls */
 .bowl-wrap {
   position: relative;
+  z-index: 1;
   width: clamp(150px, 34vmin, 280px);
-  height: clamp(120px, 28vmin, 230px);
+  aspect-ratio: 664 / 549;
 }
 .bowl-wrap--big {
-  width: clamp(220px, 56vmin, 420px);
-  height: clamp(220px, 56vmin, 420px);
+  width: clamp(260px, 56vmin, 420px);
+  aspect-ratio: 664 / 549;
 }
 
 .bowl-slot {
@@ -424,6 +482,7 @@ body {
   align-items: center;
   cursor: pointer;
   position: relative;
+  z-index: 1;
   padding: clamp(10px, 2vmin, 18px);
   border-radius: var(--radius-lg);
   transition: transform 0.1s ease, background 0.15s ease;
@@ -434,14 +493,16 @@ body {
   background: rgba(255, 255, 255, 0.5);
 }
 
-.carton-emoji, .ladle-emoji {
-  font-size: clamp(70px, 17vmin, 130px);
+.carton-img, .ladle-img {
+  width: clamp(86px, 19vmin, 150px);
+  height: clamp(86px, 19vmin, 150px);
+  object-fit: contain;
   filter: drop-shadow(0 10px 14px var(--shadow));
   transform-origin: 70% 20%;
   transition: transform 0.25s ease;
 }
-.hold-target.is-holding .carton-emoji { transform: rotate(-38deg); }
-.hold-target.is-holding .ladle-emoji { transform: rotate(-22deg) translateY(4px); }
+.hold-target.is-holding .carton-img { transform: rotate(-38deg); }
+.hold-target.is-holding .ladle-img { transform: rotate(-22deg) translateY(4px); }
 
 .pour-stream {
   position: absolute;
@@ -493,6 +554,7 @@ body {
 .stage--stir { position: relative; }
 #stirSurface {
   position: relative;
+  z-index: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -516,7 +578,9 @@ body {
 
 .swirl-spoon {
   position: absolute;
-  font-size: clamp(34px, 8vmin, 60px);
+  width: clamp(40px, 9vmin, 72px);
+  height: clamp(40px, 9vmin, 72px);
+  object-fit: contain;
   filter: drop-shadow(0 6px 10px var(--shadow));
   transform: translate(0, -120px);
   opacity: 0;
@@ -528,8 +592,9 @@ body {
 /* Batter / pan */
 .pan-wrap {
   position: relative;
-  width: clamp(190px, 44vmin, 340px);
-  height: clamp(190px, 44vmin, 340px);
+  z-index: 1;
+  width: clamp(230px, 50vmin, 400px);
+  aspect-ratio: 842 / 499;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -546,7 +611,7 @@ body {
   transition: width 0.12s linear, height 0.12s linear;
 }
 
-.ladle-emoji { transform-origin: 50% 70%; }
+.ladle-img { transform-origin: 50% 70%; }
 
 /* Flip — the pan asset itself flips (raw -> golden swap happens mid-animation) */
 .pan-slot {
