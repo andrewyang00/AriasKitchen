@@ -69,17 +69,15 @@
 
     <!-- ============================= EGGS ============================== -->
     <section class="screen" data-screen="EGGS">
-      <div class="screen-header">
-        <div class="aria-portrait aria-portrait--small" id="ariaEggs"></div>
-        <div class="prompt-bubble">
-          <span class="prompt-icon" aria-hidden="true">🥚</span>
-          <span class="prompt-icon" aria-hidden="true">🥚</span>
-          <span class="prompt-icon prompt-icon--tap" aria-hidden="true">👆</span>
-        </div>
+      <div class="prompt-bubble">
+        <span class="prompt-icon" aria-hidden="true">🥚</span>
+        <span class="prompt-icon" aria-hidden="true">🥚</span>
+        <span class="prompt-icon prompt-icon--tap" aria-hidden="true">👆</span>
       </div>
       <div class="stage stage--eggs">
+        <div class="aria-portrait aria-portrait--stage" id="ariaEggs"></div>
         <div class="egg-row" id="eggRow"><!-- egg targets injected by app.js --></div>
-        <div class="bowl-wrap">
+        <div class="bowl-wrap grounded-shadow">
           <div class="bowl-slot" id="bowlEggsSlot"></div>
         </div>
       </div>
@@ -88,19 +86,17 @@
 
     <!-- ============================= MILK ============================== -->
     <section class="screen" data-screen="MILK">
-      <div class="screen-header">
-        <div class="aria-portrait aria-portrait--small" id="ariaMilk"></div>
-        <div class="prompt-bubble">
-          <span class="prompt-icon" aria-hidden="true">🥛</span>
-          <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
-        </div>
+      <div class="prompt-bubble">
+        <span class="prompt-icon" aria-hidden="true">🥛</span>
+        <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
       </div>
       <div class="stage stage--milk">
-        <button class="hold-target carton" id="milkCarton" type="button" aria-label="Hold to pour milk">
+        <div class="aria-portrait aria-portrait--stage" id="ariaMilk"></div>
+        <button class="hold-target carton grounded-shadow" id="milkCarton" type="button" aria-label="Hold to pour milk">
           <span class="carton-emoji" aria-hidden="true">🥛</span>
           <span class="pour-stream" id="milkStream" aria-hidden="true"></span>
         </button>
-        <div class="bowl-wrap">
+        <div class="bowl-wrap grounded-shadow">
           <div class="bowl-slot" id="bowlMilkSlot"></div>
           <div class="fill-meter" aria-hidden="true">
             <div class="fill-meter-bar" id="milkFillBar"></div>
@@ -111,15 +107,13 @@
 
     <!-- ============================= STIR ============================== -->
     <section class="screen" data-screen="STIR">
-      <div class="screen-header">
-        <div class="aria-portrait aria-portrait--small" id="ariaStir"></div>
-        <div class="prompt-bubble">
-          <span class="prompt-icon prompt-icon--swirl" aria-hidden="true">🥄</span>
-          <span class="prompt-icon prompt-icon--swirl-arrow" aria-hidden="true">🔄</span>
-        </div>
+      <div class="prompt-bubble">
+        <span class="prompt-icon prompt-icon--swirl" aria-hidden="true">🥄</span>
+        <span class="prompt-icon prompt-icon--swirl-arrow" aria-hidden="true">🔄</span>
       </div>
       <div class="stage stage--stir">
-        <div class="bowl-wrap bowl-wrap--big" id="stirSurface">
+        <div class="aria-portrait aria-portrait--stage" id="ariaStir"></div>
+        <div class="bowl-wrap bowl-wrap--big grounded-shadow" id="stirSurface">
           <div class="bowl-slot bowl-slot--big" id="bowlStirSlot"></div>
           <div class="swirl-trail" id="swirlTrail" aria-hidden="true"></div>
           <div class="swirl-spoon" id="swirlSpoon" aria-hidden="true">🥄</div>
@@ -130,19 +124,17 @@
 
     <!-- ============================ BATTER ============================= -->
     <section class="screen" data-screen="BATTER">
-      <div class="screen-header">
-        <div class="aria-portrait aria-portrait--small" id="ariaBatter"></div>
-        <div class="prompt-bubble">
-          <span class="prompt-icon" aria-hidden="true">🥣</span>
-          <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
-        </div>
+      <div class="prompt-bubble">
+        <span class="prompt-icon" aria-hidden="true">🥣</span>
+        <span class="prompt-icon prompt-icon--hold" aria-hidden="true">✋</span>
       </div>
       <div class="stage stage--batter">
-        <button class="hold-target ladle" id="batterLadle" type="button" aria-label="Hold to pour batter onto the pan">
+        <div class="aria-portrait aria-portrait--stage" id="ariaBatter"></div>
+        <button class="hold-target ladle grounded-shadow" id="batterLadle" type="button" aria-label="Hold to pour batter onto the pan">
           <span class="ladle-emoji" aria-hidden="true">🥣</span>
           <span class="pour-stream pour-stream--vertical" id="batterStream" aria-hidden="true"></span>
         </button>
-        <div class="pan-wrap">
+        <div class="pan-wrap grounded-shadow">
           <div class="pan-slot" id="panBatterSlot"></div>
           <div class="batter-pool" id="batterPool" aria-hidden="true"></div>
         </div>
@@ -151,15 +143,13 @@
 
     <!-- ============================= FLIP =============================== -->
     <section class="screen" data-screen="FLIP">
-      <div class="screen-header">
-        <div class="aria-portrait aria-portrait--small" id="ariaFlip"></div>
-        <div class="prompt-bubble">
-          <span class="prompt-icon prompt-icon--swipe" aria-hidden="true">⬆️</span>
-          <span class="prompt-icon" aria-hidden="true">🥞</span>
-        </div>
+      <div class="prompt-bubble">
+        <span class="prompt-icon prompt-icon--swipe" aria-hidden="true">⬆️</span>
+        <span class="prompt-icon" aria-hidden="true">🥞</span>
       </div>
       <div class="stage stage--flip">
-        <div class="pan-wrap" id="flipPanWrap">
+        <div class="aria-portrait aria-portrait--stage" id="ariaFlip"></div>
+        <div class="pan-wrap grounded-shadow" id="flipPanWrap">
           <div class="pan-slot" id="panFlipSlot"></div>
         </div>
         <div class="swipe-hint" id="swipeHint" aria-hidden="true">⬆️</div>

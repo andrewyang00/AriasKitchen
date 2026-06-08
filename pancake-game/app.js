@@ -205,7 +205,7 @@
     for (let i = 0; i < 2; i++) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'egg';
+      button.className = 'egg grounded-shadow';
       button.setAttribute('aria-label', 'Egg — tap twice to crack it');
       const assetNode = createAsset('eggWhole', { alt: 'Whole egg', extraClass: 'egg-glyph' });
       const yolk = document.createElement('div');

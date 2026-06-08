@@ -37,7 +37,10 @@ html, body {
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Avenir Next', 'Segoe UI', sans-serif;
-  background: linear-gradient(180deg, #fff7fa 0%, #ffe7f0 60%, #ffd9e8 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 250, 0.5) 0%, rgba(255, 231, 240, 0.55) 55%, rgba(255, 217, 232, 0.7) 100%),
+    url('assets/images/kitchen_bg.jpg') center / cover no-repeat;
+  background-attachment: fixed;
   color: var(--ink);
   overflow: hidden;
   /* Prevent iOS rubber-band scroll / pinch-zoom so the game feels native */
@@ -136,6 +139,41 @@ body {
 .aria-portrait--celebrate {
   width: clamp(140px, 32vmin, 280px);
   height: clamp(140px, 32vmin, 280px);
+}
+
+/* Aria stands at the counter's edge while the action happens center-stage —
+   absolutely positioned (and non-interactive) so she never competes with the
+   egg/bowl/pan/hold-target row for flex space or taps, just like the
+   storyboard composition (chef off to one side, props front and center). */
+.aria-portrait--stage {
+  position: absolute;
+  left: clamp(0px, 1.4vmin, 12px);
+  bottom: 0;
+  width: clamp(92px, 21vmin, 180px);
+  height: clamp(92px, 21vmin, 180px);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------- grounding shadows */
+
+/* A soft contact shadow under anything that should read as "resting on the
+   counter" (Aria, bowls, pans, eggs, the carton/ladle) — without it, art
+   floats over the kitchen background instead of feeling part of the scene. */
+.grounded-shadow {
+  position: relative;
+}
+.grounded-shadow::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  width: 72%;
+  height: 20%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(80, 48, 40, 0.24) 0%, rgba(80, 48, 40, 0) 72%);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  pointer-events: none;
 }
 
 .asset {
@@ -296,8 +334,9 @@ body {
 /* ----------------------------------------------------------------- stages */
 
 .stage {
+  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   gap: clamp(16px, 5vmin, 56px);
   flex-wrap: wrap;
