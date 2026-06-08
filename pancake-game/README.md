@@ -75,12 +75,12 @@ food, and prop is requested through a **named asset slot**
 *only* falls back to a styled pastel placeholder (a tinted blob + emoji) if
 that file 404s.
 
-To use the approved art-board style (chibi Aria, pastel kitchen, glossy
-food), export PNG/WebP files using the exact names listed in
-`assets/README.md` (which mirrors the art package manifest — `aria_happy.png`,
-`bowl_eggs.png`, `pan_golden.png`, `pancake_stack.png`, …) and drop them into
-`assets/images/`. No code changes are needed; the placeholders simply stop
-appearing.
+`assets/images/` is now populated with the approved chibi-Aria / pastel-kitchen
+/ glossy-food art pack (see `assets/README.md` for the full slot → filename
+table — `aria_happy.png`, `bowl_eggs.png`, `pancake_golden.png`,
+`pancake_stack_reward.png`, …), so the placeholders no longer appear during
+normal play. Dropping in a replacement is still as simple as overwriting the
+file with the matching name; no code changes are needed.
 
 ## Running locally
 

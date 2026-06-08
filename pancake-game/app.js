@@ -205,7 +205,7 @@
     for (let i = 0; i < 2; i++) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'egg';
+      button.className = 'egg grounded-shadow';
       button.setAttribute('aria-label', 'Egg — tap twice to crack it');
       const assetNode = createAsset('eggWhole', { alt: 'Whole egg', extraClass: 'egg-glyph' });
       const yolk = document.createElement('div');
@@ -260,7 +260,7 @@
   // (never resets) if released early. Full meter -> auto-advance to STIR.
   // =========================================================================
   SETUPS.MILK = function () {
-    mountAsset('ariaMilk', 'ariaExcited', 'Aria excited');
+    mountAsset('ariaMilk', 'ariaPouring', 'Aria pouring milk');
     let bowlAsset = mountAsset('bowlMilkSlot', 'bowlEggs', 'Bowl with eggs').querySelector('.asset');
     const carton = document.getElementById('milkCarton');
     const fillBar = document.getElementById('milkFillBar');
@@ -339,7 +339,7 @@
   // circle). Need STIR_TARGET turns to move on.
   // =========================================================================
   SETUPS.STIR = function () {
-    mountAsset('ariaStir', 'ariaFocused', 'Aria concentrating');
+    mountAsset('ariaStir', 'ariaStirring', 'Aria stirring');
     let bowlAsset = mountAsset('bowlStirSlot', 'bowlMilk', 'Bowl with milk').querySelector('.asset');
     const surface = document.getElementById('stirSurface');
     const trail = document.getElementById('swirlTrail');
@@ -457,8 +457,8 @@
   // and pauses (never shrinks) if released early. Full size -> FLIP.
   // =========================================================================
   SETUPS.BATTER = function () {
-    mountAsset('ariaBatter', 'ariaExcited', 'Aria excited');
-    mountAsset('panBatterSlot', 'panRaw', 'Empty pan');
+    mountAsset('ariaBatter', 'ariaPouring', 'Aria pouring batter');
+    mountAsset('panBatterSlot', 'panEmpty', 'Empty pan');
     const ladle = document.getElementById('batterLadle');
     const pool = document.getElementById('batterPool');
 
@@ -540,8 +540,8 @@
   // A swipe that isn't "up enough" just gives a gentle wobble — try again.
   // =========================================================================
   SETUPS.FLIP = function () {
-    mountAsset('ariaFlip', 'ariaFocused', 'Aria focused');
-    let panAsset = mountAsset('panFlipSlot', 'panRaw', 'Pan with raw pancake').querySelector('.asset');
+    mountAsset('ariaFlip', 'ariaFlipping', 'Aria flipping the pancake');
+    let panAsset = mountAsset('panFlipSlot', 'pancakeRaw', 'Pan with raw pancake').querySelector('.asset');
     const panSlot = document.getElementById('panFlipSlot');
     const wrap = document.getElementById('flipPanWrap');
     const hint = document.getElementById('swipeHint');
@@ -589,7 +589,7 @@
       panSlot.classList.add('is-flipping');
 
       setTimeout(() => {
-        panAsset = updateAsset(panAsset, 'panGolden', { alt: 'Pan with golden pancake' });
+        panAsset = updateAsset(panAsset, 'pancakeGolden', { alt: 'Pan with golden pancake' });
         gameAudio.playStepComplete();
       }, 320);
       setTimeout(() => panSlot.classList.remove('is-flipping'), 650);
