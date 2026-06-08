@@ -11,18 +11,21 @@
 const ASSET_FILES = {
   ariaHappy: 'aria_happy.png',
   ariaExcited: 'aria_excited.png',
-  ariaFocused: 'aria_focused.png',
-  ariaCelebrating: 'aria_celebrating.png',
+  ariaPouring: 'aria_pouring.png',
+  ariaStirring: 'aria_stirring.png',
+  ariaFlipping: 'aria_flipping.png',
+  ariaCelebrating: 'aria_celebrate.png',
   eggWhole: 'egg_whole.png',
   eggCracked: 'egg_cracked.png',
   bowlEmpty: 'bowl_empty.png',
   bowlEggs: 'bowl_eggs.png',
   bowlMilk: 'bowl_milk.png',
-  bowlStir1: 'bowl_stir_1.png',
-  bowlStir2: 'bowl_stir_2.png',
-  panRaw: 'pan_raw.png',
-  panGolden: 'pan_golden.png',
-  pancakeStack: 'pancake_stack.png',
+  bowlStir1: 'bowl_milk.png',
+  bowlStir2: 'bowl_batter.png',
+  panEmpty: 'pan_empty.png',
+  pancakeRaw: 'pancake_raw.png',
+  pancakeGolden: 'pancake_golden.png',
+  pancakeStack: 'pancake_stack_reward.png',
 };
 
 // Placeholder look for each slot: an emoji glyph + pastel background tint.
@@ -31,7 +34,9 @@ const ASSET_FILES = {
 const PLACEHOLDER_LOOK = {
   ariaHappy: { glyph: '😊', tint: 'pink' },
   ariaExcited: { glyph: '🤩', tint: 'pink' },
-  ariaFocused: { glyph: '🤔', tint: 'pink' },
+  ariaPouring: { glyph: '🫗', tint: 'pink' },
+  ariaStirring: { glyph: '🥄', tint: 'pink' },
+  ariaFlipping: { glyph: '🤸', tint: 'pink' },
   ariaCelebrating: { glyph: '🥳', tint: 'pink' },
   eggWhole: { glyph: '🥚', tint: 'cream' },
   eggCracked: { glyph: '🐣', tint: 'cream' },
@@ -40,8 +45,9 @@ const PLACEHOLDER_LOOK = {
   bowlMilk: { glyph: '🥛', tint: 'cream' },
   bowlStir1: { glyph: '🥣', tint: 'butter' },
   bowlStir2: { glyph: '🥣', tint: 'butter' },
-  panRaw: { glyph: '🍳', tint: 'butter' },
-  panGolden: { glyph: '🥞', tint: 'golden' },
+  panEmpty: { glyph: '🍳', tint: 'butter' },
+  pancakeRaw: { glyph: '🥞', tint: 'butter' },
+  pancakeGolden: { glyph: '🥞', tint: 'golden' },
   pancakeStack: { glyph: '🥞', tint: 'golden' },
 };
 
