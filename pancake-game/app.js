@@ -28,6 +28,7 @@
   const BATTER_HOLD_SECONDS = 1.8;  // how long to hold to grow the pancake
   const SWIPE_UP_THRESHOLD = 56;    // px of upward motion that counts as "swipe up"
   const COUNT_CAP = 5;              // brief: "Counts cap at 5"
+  const STEP_ORDER = ['EGGS', 'MILK', 'STIR', 'BATTER', 'FLIP', 'CELEBRATE'];
 
   const clampCount = (n) => Math.min(n, COUNT_CAP);
 
@@ -53,6 +54,7 @@
   document.querySelectorAll('.screen').forEach((el) => {
     screens[el.dataset.screen] = el;
   });
+  const appEl = document.getElementById('app');
 
   const SETUPS = {};      // STATE -> () => cleanupFn | undefined
   let currentState = null;
@@ -67,7 +69,9 @@
       screens[currentState].classList.remove('is-active');
     }
     currentState = nextState;
+    appEl.dataset.screen = nextState;
     screens[nextState].classList.add('is-active');
+    renderStepPips(screens[nextState], nextState);
     const setup = SETUPS[nextState];
     currentCleanup = setup ? setup() || null : null;
   }
@@ -98,6 +102,19 @@
 
   function setDots(dots, filledCount) {
     dots.forEach((dot, i) => dot.classList.toggle('is-filled', i < filledCount));
+  }
+
+  function renderStepPips(screenEl, state) {
+    const holder = screenEl.querySelector('.step-pips');
+    if (!holder) return;
+    const activeIndex = STEP_ORDER.indexOf(state);
+    holder.innerHTML = '';
+    STEP_ORDER.forEach((_, i) => {
+      const pip = document.createElement('span');
+      pip.className = 'step-pip';
+      pip.classList.toggle('is-filled', i <= activeIndex);
+      holder.appendChild(pip);
+    });
   }
 
   /**
@@ -132,6 +149,38 @@
     };
     screenEl.addEventListener('pointerdown', handler);
     return () => screenEl.removeEventListener('pointerdown', handler);
+  }
+
+  function attachOffTargetHint(screenEl, interactiveSelector, hintTargets) {
+    const handler = (e) => {
+      if (e.target.closest(interactiveSelector)) return;
+      gameAudio.playBoop();
+      hintTargets().forEach((target) => {
+        target.classList.remove('egg-hint');
+        void target.offsetWidth;
+        target.classList.add('egg-hint');
+      });
+    };
+    screenEl.addEventListener('pointerdown', handler);
+    return () => screenEl.removeEventListener('pointerdown', handler);
+  }
+
+  function setupChromeButtons() {
+    const homeButton = document.querySelector('.round-nav--home');
+    const soundButton = document.querySelector('.round-nav--sound');
+
+    homeButton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      gameAudio.playChime();
+      resetGame();
+      goTo('SELECT');
+    });
+
+    soundButton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      gameAudio.playBoop();
+      wobble(soundButton);
+    });
   }
 
   // =========================================================================
@@ -193,8 +242,6 @@
   // yolk into the bowl. Two eggs done -> auto-advance to MILK.
   // =========================================================================
   SETUPS.EGGS = function () {
-    mountAsset('ariaEggs', 'ariaExcited', 'Aria excited');
-    let bowlAsset = mountAsset('bowlEggsSlot', 'bowlEmpty', 'Mixing bowl').querySelector('.asset');
     const dots = buildDots('dotsEggs', 2);
     setDots(dots, 0);
 
@@ -237,9 +284,6 @@
         gameAudio.playPlop();
         const doneCount = eggs.filter((e) => e.stage >= 2).length;
         setDots(dots, doneCount);
-        if (doneCount === 1) {
-          bowlAsset = updateAsset(bowlAsset, 'bowlEggs', { alt: 'Bowl with one egg' });
-        }
         if (doneCount === 2) {
           gameAudio.playStepComplete();
           setTimeout(() => goTo('MILK'), 900);
@@ -247,7 +291,7 @@
       }
     }
 
-    const offTarget = attachOffTargetWobble(screens.EGGS, '.egg', document.getElementById('ariaEggs'));
+    const offTarget = attachOffTargetHint(screens.EGGS, '.egg', () => eggs.filter((egg) => egg.stage < 2).map((egg) => egg.el));
 
     return () => {
       eggs.forEach((eggData) => eggData._cleanup());
@@ -260,9 +304,8 @@
   // (never resets) if released early. Full meter -> auto-advance to STIR.
   // =========================================================================
   SETUPS.MILK = function () {
-    mountAsset('ariaMilk', 'ariaPouring', 'Aria pouring milk');
-    let bowlAsset = mountAsset('bowlMilkSlot', 'bowlEggs', 'Bowl with eggs').querySelector('.asset');
     const carton = document.getElementById('milkCarton');
+    const scene = carton.closest('.scene-frame');
     const fillBar = document.getElementById('milkFillBar');
     fillBar.style.height = `${Math.round(game.milkFill * 100)}%`;
 
@@ -284,7 +327,6 @@
       if (game.milkFill >= 1 && !advanced) {
         advanced = true;
         stopHolding();
-        bowlAsset = updateAsset(bowlAsset, 'bowlMilk', { alt: 'Bowl with milk' });
         gameAudio.playStepComplete();
         setTimeout(() => goTo('STIR'), 850);
         return;
@@ -297,6 +339,7 @@
       holding = true;
       lastTime = null;
       carton.classList.add('is-holding');
+      scene.classList.add('is-holding');
       stopPour = gameAudio.playPourLoop();
       rafId = requestAnimationFrame(tick);
     }
@@ -305,29 +348,29 @@
       if (!holding) return;
       holding = false;
       carton.classList.remove('is-holding');
+      scene.classList.remove('is-holding');
       if (rafId) cancelAnimationFrame(rafId);
       if (stopPour) { stopPour(); stopPour = null; }
     }
 
     function onPointerDown(e) {
       e.preventDefault();
-      if (!advanced) safeSetPointerCapture(carton, e.pointerId);
+      if (!advanced) safeSetPointerCapture(scene, e.pointerId);
       startHolding();
     }
     function onPointerUp() { stopHolding(); }
 
-    carton.addEventListener('pointerdown', onPointerDown);
-    carton.addEventListener('pointerup', onPointerUp);
-    carton.addEventListener('pointercancel', onPointerUp);
-
-    const offTarget = attachOffTargetWobble(screens.MILK, '.hold-target', document.getElementById('ariaMilk'));
+    scene.addEventListener('pointerdown', onPointerDown);
+    scene.addEventListener('pointerup', onPointerUp);
+    scene.addEventListener('pointercancel', onPointerUp);
+    scene.addEventListener('pointerleave', onPointerUp);
 
     return () => {
       stopHolding();
-      carton.removeEventListener('pointerdown', onPointerDown);
-      carton.removeEventListener('pointerup', onPointerUp);
-      carton.removeEventListener('pointercancel', onPointerUp);
-      offTarget();
+      scene.removeEventListener('pointerdown', onPointerDown);
+      scene.removeEventListener('pointerup', onPointerUp);
+      scene.removeEventListener('pointercancel', onPointerUp);
+      scene.removeEventListener('pointerleave', onPointerUp);
     };
   };
 
@@ -339,8 +382,6 @@
   // circle). Need STIR_TARGET turns to move on.
   // =========================================================================
   SETUPS.STIR = function () {
-    mountAsset('ariaStir', 'ariaStirring', 'Aria stirring');
-    let bowlAsset = mountAsset('bowlStirSlot', 'bowlMilk', 'Bowl with milk').querySelector('.asset');
     const surface = document.getElementById('stirSurface');
     const trail = document.getElementById('swirlTrail');
     const spoon = document.getElementById('swirlSpoon');
@@ -380,6 +421,7 @@
         ? Math.atan2(e.clientY - geo.cy, e.clientX - geo.cx)
         : null;
       accumAngle = 0;
+      surface.classList.add('is-stirring');
       trail.classList.add('is-active');
       spoon.classList.add('is-visible');
       placeSpoon(e.clientX, e.clientY, geo.rect);
@@ -415,9 +457,6 @@
       gameAudio.playSwirl();
       setDots(dots, Math.min(turns, STIR_TARGET));
 
-      if (turns === 1) bowlAsset = updateAsset(bowlAsset, 'bowlStir1', { alt: 'Bowl partly stirred' });
-      if (turns === 2) bowlAsset = updateAsset(bowlAsset, 'bowlStir2', { alt: 'Bowl almost mixed' });
-
       if (turns >= STIR_TARGET && !advanced) {
         advanced = true;
         gameAudio.playStepComplete();
@@ -430,6 +469,7 @@
       pointerId = null;
       lastAngle = null;
       accumAngle = 0;
+      surface.classList.remove('is-stirring');
       trail.classList.remove('is-active');
       spoon.classList.remove('is-visible');
     }
@@ -457,18 +497,12 @@
   // and pauses (never shrinks) if released early. Full size -> FLIP.
   // =========================================================================
   SETUPS.BATTER = function () {
-    mountAsset('ariaBatter', 'ariaPouring', 'Aria pouring batter');
-    mountAsset('panBatterSlot', 'panEmpty', 'Empty pan');
     const ladle = document.getElementById('batterLadle');
-    const pool = document.getElementById('batterPool');
+    const scene = ladle.closest('.scene-frame');
+    const fillBar = document.getElementById('batterFillBar');
 
-    const MIN_PCT = 14;
-    const MAX_PCT = 64;
     function applyPoolSize() {
-      const pct = MIN_PCT + game.batterSize * (MAX_PCT - MIN_PCT);
-      pool.style.width = `${pct}%`;
-      pool.style.height = `${pct}%`;
-      pool.style.opacity = game.batterSize > 0 ? '1' : '0';
+      fillBar.style.height = `${Math.round(game.batterSize * 100)}%`;
     }
     applyPoolSize();
 
@@ -502,6 +536,7 @@
       holding = true;
       lastTime = null;
       ladle.classList.add('is-holding');
+      scene.classList.add('is-holding');
       stopSizzle = gameAudio.playSizzleLoop();
       rafId = requestAnimationFrame(tick);
     }
@@ -509,29 +544,29 @@
       if (!holding) return;
       holding = false;
       ladle.classList.remove('is-holding');
+      scene.classList.remove('is-holding');
       if (rafId) cancelAnimationFrame(rafId);
       if (stopSizzle) { stopSizzle(); stopSizzle = null; }
     }
 
     function onPointerDown(e) {
       e.preventDefault();
-      if (!advanced) safeSetPointerCapture(ladle, e.pointerId);
+      if (!advanced) safeSetPointerCapture(scene, e.pointerId);
       startHolding();
     }
     function onPointerUp() { stopHolding(); }
 
-    ladle.addEventListener('pointerdown', onPointerDown);
-    ladle.addEventListener('pointerup', onPointerUp);
-    ladle.addEventListener('pointercancel', onPointerUp);
-
-    const offTarget = attachOffTargetWobble(screens.BATTER, '.hold-target', document.getElementById('ariaBatter'));
+    scene.addEventListener('pointerdown', onPointerDown);
+    scene.addEventListener('pointerup', onPointerUp);
+    scene.addEventListener('pointercancel', onPointerUp);
+    scene.addEventListener('pointerleave', onPointerUp);
 
     return () => {
       stopHolding();
-      ladle.removeEventListener('pointerdown', onPointerDown);
-      ladle.removeEventListener('pointerup', onPointerUp);
-      ladle.removeEventListener('pointercancel', onPointerUp);
-      offTarget();
+      scene.removeEventListener('pointerdown', onPointerDown);
+      scene.removeEventListener('pointerup', onPointerUp);
+      scene.removeEventListener('pointercancel', onPointerUp);
+      scene.removeEventListener('pointerleave', onPointerUp);
     };
   };
 
@@ -540,9 +575,6 @@
   // A swipe that isn't "up enough" just gives a gentle wobble — try again.
   // =========================================================================
   SETUPS.FLIP = function () {
-    mountAsset('ariaFlip', 'ariaFlipping', 'Aria flipping the pancake');
-    let panAsset = mountAsset('panFlipSlot', 'pancakeRaw', 'Pan with raw pancake').querySelector('.asset');
-    const panSlot = document.getElementById('panFlipSlot');
     const wrap = document.getElementById('flipPanWrap');
     const hint = document.getElementById('swipeHint');
 
@@ -573,7 +605,7 @@
       if (dy <= -SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
         doFlip();
       } else {
-        wobble(document.getElementById('ariaFlip'));
+        wobble(wrap);
       }
     }
 
@@ -586,13 +618,12 @@
       game.flipped = true;
       hint.style.opacity = '0';
       gameAudio.playFlipWhoosh();
-      panSlot.classList.add('is-flipping');
+      wrap.classList.add('is-flipping');
 
       setTimeout(() => {
-        panAsset = updateAsset(panAsset, 'pancakeGolden', { alt: 'Pan with golden pancake' });
         gameAudio.playStepComplete();
       }, 320);
-      setTimeout(() => panSlot.classList.remove('is-flipping'), 650);
+      setTimeout(() => wrap.classList.remove('is-flipping'), 650);
       setTimeout(() => goTo('CELEBRATE'), 1650);
     }
 
@@ -612,8 +643,6 @@
   // friendly "play again" button that loops back to recipe select.
   // =========================================================================
   SETUPS.CELEBRATE = function () {
-    mountAsset('ariaCelebrate', 'ariaCelebrating', 'Aria celebrating');
-    mountAsset('pancakeStackSlot', 'pancakeStack', 'A finished stack of pancakes');
     const field = document.getElementById('confettiField');
     const playAgain = document.getElementById('playAgainButton');
 
@@ -647,6 +676,7 @@
   };
 
   // ---- boot ---------------------------------------------------------------
+  setupChromeButtons();
   goTo('START');
 
   if ('serviceWorker' in navigator) {

@@ -1,6 +1,6 @@
 // Minimal offline cache so the game can be installed and opened without a
 // network connection once it has been visited at least once.
-const CACHE_NAME = 'aria-pancakes-v1';
+const CACHE_NAME = 'aria-pancakes-v14';
 const CORE_FILES = [
   './',
   './index.html',
@@ -8,6 +8,17 @@ const CORE_FILES = [
   './assets.js',
   './audio.js',
   './app.js',
+  './assets/images/scene_eggs_plate.png',
+  './assets/images/scene_milk_idle_plate.png',
+  './assets/images/scene_milk_active_plate.png',
+  './assets/images/scene_stir_plate.png',
+  './assets/images/scene_stir_active_plate.png',
+  './assets/images/scene_batter_idle_plate.png',
+  './assets/images/scene_batter_active_plate.png',
+  './assets/images/scene_batter_plate.png',
+  './assets/images/scene_flip_idle_plate.png',
+  './assets/images/scene_flip_plate.png',
+  './assets/images/scene_celebrate_plate.png',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
