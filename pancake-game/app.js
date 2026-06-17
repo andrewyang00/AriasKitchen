@@ -193,9 +193,13 @@
       card.dataset.recipe = id;
       card.setAttribute('aria-label', `Make ${recipe.name}`);
 
-      const art = document.createElement('div');
-      art.className = `recipe-card-art tint-${recipe.cardArt.tint}`;
-      art.textContent = recipe.cardArt.glyph;
+      const art = recipe.cardArt.slot
+        ? createAsset(recipe.cardArt.slot, { alt: '', extraClass: 'recipe-card-art' })
+        : document.createElement('div');
+      if (!recipe.cardArt.slot) {
+        art.className = `recipe-card-art tint-${recipe.cardArt.tint}`;
+        art.textContent = recipe.cardArt.glyph;
+      }
       art.setAttribute('aria-hidden', 'true');
 
       const label = document.createElement('span');

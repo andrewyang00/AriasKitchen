@@ -14,7 +14,11 @@
 //   you don't have illustrated art yet, just omit `file` from a scene/stage
 //   entry (or leave it out entirely) — the engine shows a friendly tinted
 //   placeholder with `glyph` until you drop in
-//   assets/images/scene_<id>_<step>.png (see assets/README.md).
+//   assets/images/scene_<id>_<step>.png (see assets/README.md). The same
+//   applies to the recipe-picker card: `cardArt.glyph`/`tint` is the
+//   placeholder look, and once a finished-dish illustration exists, add
+//   `cardArt.slot` naming an ASSET_FILES entry (see `pancakes` below,
+//   which uses the real `pancakeStack` art) to show it instead.
 //
 // HOW HOTSPOT/LAYOUT POSITIONING WORKS:
 //   Every mechanic has a sensible built-in default layout (centered hotspot,
@@ -28,7 +32,7 @@ const RECIPES = {
   pancakes: {
     id: 'pancakes',
     name: 'Pancakes',
-    cardArt: { glyph: '🥞', tint: 'golden' },
+    cardArt: { glyph: '🥞', tint: 'golden', slot: 'pancakeStack' },
     steps: [
       {
         id: 'EGGS',
