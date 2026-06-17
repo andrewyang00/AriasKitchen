@@ -1,20 +1,17 @@
 // ===========================================================================
-// app.js — Little Chef Aria: Pancakes
+// app.js — Aria's Kitchen: generic recipe engine.
 //
-// A small, explicit state machine drives the whole game:
-//   START -> SELECT -> EGGS -> MILK -> STIR -> BATTER -> FLIP -> CELEBRATE
-//   (Play Again from CELEBRATE goes back to SELECT)
+// One small state machine drives three screens: START -> SELECT -> STEP.
+// STEP is a single reusable shell rendered fresh for every step of whatever
+// recipe the player picked, using recipes.js data and one of six reusable
+// mechanic handlers (tapCounter, holdFill, dragCircle, swipeGesture,
+// smearCoverage, colorMatch) plus a celebrate finale. Adding a new recipe
+// never touches this file — it only ever reads RECIPES.
 //
-// Design notes for whoever extends this:
-//   - All game progress lives in the `game` object below, in memory only.
-//     Nothing is persisted (no localStorage/cookies) — a fresh load always
-//     starts at START, which keeps the prototype simple and predictable.
-//   - Every screen has a SETUPS[STATE] function that wires up that screen's
-//     interactions and returns a cleanup function. goTo() always tears down
-//     the previous screen before wiring up the next one, so listeners never
-//     pile up across replays.
-//   - Touch handling uses Pointer Events (pointerdown/move/up/cancel) which
-//     iOS Safari supports and which unify mouse + touch + pen.
+// Design notes:
+//   - All game progress lives in memory only (no persistence) — a fresh
+//     load always starts at START.
+//   - Touch handling uses Pointer Events (pointerdown/move/up/cancel).
 //   - There are NO fail states. Every interaction either makes progress,
 //     waits patiently, or triggers a friendly "wobble" + boop sound.
 // ===========================================================================
@@ -22,31 +19,17 @@
 (function () {
   'use strict';
 
-  // ---- tunable gameplay constants ---------------------------------------
-  const STIR_TARGET = 3;            // full swirls needed (brief: "stir 3 times")
-  const MILK_HOLD_SECONDS = 2.0;    // how long to hold to fill the bowl
-  const BATTER_HOLD_SECONDS = 1.8;  // how long to hold to grow the pancake
-  const SWIPE_UP_THRESHOLD = 56;    // px of upward motion that counts as "swipe up"
-  const COUNT_CAP = 5;              // brief: "Counts cap at 5"
-  const STEP_ORDER = ['EGGS', 'MILK', 'STIR', 'BATTER', 'FLIP', 'CELEBRATE'];
-
+  const COUNT_CAP = 5; // counts cap at 5, same brief as the original pancakes-only build
   const clampCount = (n) => Math.min(n, COUNT_CAP);
 
-  // ---- in-memory game state (no localStorage, resets on reload/replay) --
   const game = {
-    eggStage: [0, 0],   // per egg: 0 = whole, 1 = cracked, 2 = emptied into bowl
-    milkFill: 0,        // 0..1
-    stirTurns: 0,       // completed rough revolutions
-    batterSize: 0,      // 0..1
-    flipped: false,
+    recipe: null,
+    stepIndex: 0,
   };
 
   function resetGame() {
-    game.eggStage = [0, 0];
-    game.milkFill = 0;
-    game.stirTurns = 0;
-    game.batterSize = 0;
-    game.flipped = false;
+    game.recipe = null;
+    game.stepIndex = 0;
   }
 
   // ---- screen registry + state machine -----------------------------------
@@ -71,14 +54,12 @@
     currentState = nextState;
     appEl.dataset.screen = nextState;
     screens[nextState].classList.add('is-active');
-    renderStepPips(screens[nextState], nextState);
     const setup = SETUPS[nextState];
     currentCleanup = setup ? setup() || null : null;
   }
 
   // ---- small DOM helpers --------------------------------------------------
 
-  /** Clear a container and mount a named asset slot inside it. Returns the container. */
   function mountAsset(containerId, slotName, alt) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
@@ -86,7 +67,6 @@
     return container;
   }
 
-  /** Build N empty progress dots inside a container; returns the dot elements. */
   function buildDots(containerId, total) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
@@ -104,31 +84,21 @@
     dots.forEach((dot, i) => dot.classList.toggle('is-filled', i < filledCount));
   }
 
-  function renderStepPips(screenEl, state) {
-    const holder = screenEl.querySelector('.step-pips');
-    if (!holder) return;
-    const activeIndex = STEP_ORDER.indexOf(state);
+  function renderStepPips(total, activeIndex) {
+    const holder = document.getElementById('stepPips');
     holder.innerHTML = '';
-    STEP_ORDER.forEach((_, i) => {
+    for (let i = 0; i < total; i++) {
       const pip = document.createElement('span');
       pip.className = 'step-pip';
       pip.classList.toggle('is-filled', i <= activeIndex);
       holder.appendChild(pip);
-    });
+    }
   }
 
-  /**
-   * Pointer capture keeps a hold/drag/swipe gesture tracking an element even
-   * if the finger slides off it — but it can throw if the browser doesn't
-   * consider the pointer "active" (e.g. certain edge cases around very fast
-   * taps). Capture is a nice-to-have for robustness, not a requirement, so
-   * we never let it block the gesture itself.
-   */
   function safeSetPointerCapture(el, pointerId) {
     try { el.setPointerCapture(pointerId); } catch (err) { /* ignore */ }
   }
 
-  /** Restart the gentle "wobble" animation on an element and play its sound. */
   function wobble(el) {
     if (!el) return;
     el.classList.remove('wobble');
@@ -137,15 +107,10 @@
     gameAudio.playBoop();
   }
 
-  /**
-   * Wobble `wobbleTarget` whenever the player taps somewhere on `screenEl`
-   * that isn't one of the screen's real interactive controls. This is what
-   * makes "off-target taps gently wobble, never fail" work everywhere.
-   */
   function attachOffTargetWobble(screenEl, interactiveSelector, wobbleTarget) {
     const handler = (e) => {
       if (e.target.closest(interactiveSelector)) return;
-      wobble(wobbleTarget);
+      wobble(typeof wobbleTarget === 'function' ? wobbleTarget() : wobbleTarget);
     };
     screenEl.addEventListener('pointerdown', handler);
     return () => screenEl.removeEventListener('pointerdown', handler);
@@ -183,12 +148,19 @@
     });
   }
 
+  function applyCharacterName() {
+    const name = ACTIVE_CHARACTER.name;
+    document.querySelectorAll('[data-char-name]').forEach((el) => { el.textContent = name; });
+    document.title = `${name}'s Kitchen`;
+    const metaTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if (metaTitle) metaTitle.setAttribute('content', `${name} Kitchen`);
+  }
+
   // =========================================================================
-  // START — title screen. The very first tap unlocks Web Audio (required by
-  // iOS Safari) and plays the first sound.
+  // START
   // =========================================================================
   SETUPS.START = function () {
-    mountAsset('ariaStart', 'ariaHappy', 'Aria smiling');
+    mountAsset('ariaStart', 'ariaHappy', `${ACTIVE_CHARACTER.name} smiling`);
     const button = document.getElementById('startButton');
     let started = false;
 
@@ -206,114 +178,288 @@
   };
 
   // =========================================================================
-  // SELECT — recipe picker. Only Pancakes is playable; the other two cards
-  // are friendly "coming soon" placeholders that wobble when tapped.
+  // SELECT — recipe picker, built fresh from RECIPES every visit.
   // =========================================================================
   SETUPS.SELECT = function () {
-    mountAsset('ariaSelect', 'ariaHappy', 'Aria smiling');
-    const pancakeCard = document.getElementById('recipePancakes');
-    const lockedCards = Array.from(document.querySelectorAll('.recipe-card--locked'));
+    mountAsset('ariaSelect', 'ariaHappy', `${ACTIVE_CHARACTER.name} smiling`);
+    const grid = document.getElementById('recipeGrid');
+    grid.innerHTML = '';
 
-    function onPickPancakes(e) {
+    const cards = RECIPE_ORDER.map((id) => {
+      const recipe = RECIPES[id];
+      const card = document.createElement('button');
+      card.className = 'recipe-card';
+      card.type = 'button';
+      card.dataset.recipe = id;
+      card.setAttribute('aria-label', `Make ${recipe.name}`);
+
+      const art = document.createElement('div');
+      art.className = `recipe-card-art tint-${recipe.cardArt.tint}`;
+      art.textContent = recipe.cardArt.glyph;
+      art.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.textContent = recipe.name;
+
+      const badge = document.createElement('b');
+      badge.setAttribute('aria-hidden', 'true');
+      badge.textContent = 'Start';
+
+      card.append(art, label, badge);
+      grid.appendChild(card);
+      return card;
+    });
+
+    function onPick(e) {
       e.preventDefault();
+      const id = e.currentTarget.dataset.recipe;
       gameAudio.playChime();
       resetGame();
-      goTo('EGGS');
+      game.recipe = RECIPES[id];
+      game.stepIndex = 0;
+      goTo('STEP');
     }
-    function onPickLocked(e) {
-      e.preventDefault();
-      wobble(e.currentTarget);
-    }
+    cards.forEach((card) => card.addEventListener('pointerdown', onPick));
 
-    pancakeCard.addEventListener('pointerdown', onPickPancakes);
-    lockedCards.forEach((card) => card.addEventListener('pointerdown', onPickLocked));
-
-    const offTarget = attachOffTargetWobble(screens.SELECT, '.recipe-card', document.getElementById('ariaSelect'));
+    const offTarget = attachOffTargetWobble(screens.SELECT, '.recipe-card', () => document.getElementById('ariaSelect'));
 
     return () => {
-      pancakeCard.removeEventListener('pointerdown', onPickPancakes);
-      lockedCards.forEach((card) => card.removeEventListener('pointerdown', onPickLocked));
+      cards.forEach((card) => card.removeEventListener('pointerdown', onPick));
       offTarget();
     };
   };
 
   // =========================================================================
-  // EGGS — tap each egg twice: first tap cracks it, second tap drops the
-  // yolk into the bowl. Two eggs done -> auto-advance to MILK.
+  // STEP — one reusable shell for every step of every recipe. Rebuilds the
+  // header/scene/footer from the current recipe's step data, wires up the
+  // mechanic this step uses, and advances to the next step (or loops back
+  // to SELECT, for the celebrate finale) on completion.
   // =========================================================================
-  SETUPS.EGGS = function () {
-    const dots = buildDots('dotsEggs', 2);
-    setDots(dots, 0);
 
-    const eggRow = document.getElementById('eggRow');
-    eggRow.innerHTML = '';
-    const eggs = [];
+  const INDICATOR_SLOT = {
+    tapCounter: 'tapIndicator',
+    holdFill: 'holdIndicator',
+    dragCircle: 'dragIndicator',
+    swipeGesture: 'dragIndicator',
+    smearCoverage: 'dragIndicator',
+    colorMatch: 'tapIndicator',
+  };
 
-    for (let i = 0; i < 2; i++) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'egg grounded-shadow';
-      button.setAttribute('aria-label', 'Egg — tap twice to crack it');
-      const assetNode = createAsset('eggWhole', { alt: 'Whole egg', extraClass: 'egg-glyph' });
-      const yolk = document.createElement('div');
-      yolk.className = 'egg-yolk';
-      button.append(assetNode, yolk);
-      eggRow.appendChild(button);
+  const MECHANICS = {}; // mechanicName -> (sceneFrame, step, onComplete) => cleanupFn
 
-      const eggData = { el: button, assetNode, stage: 0 };
-      eggs.push(eggData);
+  function advanceStep() {
+    game.stepIndex += 1;
+    if (currentCleanup) { currentCleanup(); currentCleanup = null; }
+    currentCleanup = buildStepScreen() || null;
+  }
 
-      const onTap = (e) => {
-        e.preventDefault();
-        crackEgg(eggData);
-      };
-      button.addEventListener('pointerdown', onTap);
-      eggData._cleanup = () => button.removeEventListener('pointerdown', onTap);
+  SETUPS.STEP = function () {
+    return buildStepScreen();
+  };
+
+  function buildStepScreen() {
+    const recipe = game.recipe;
+    const step = recipe.steps[game.stepIndex];
+    const total = recipe.steps.length;
+
+    document.getElementById('stepBadge').textContent = String(game.stepIndex + 1);
+    document.getElementById('stepEyebrow').textContent = step.eyebrow || '';
+    document.getElementById('stepTitle').textContent = step.title || '';
+    renderStepPips(total, game.stepIndex);
+
+    const stage = document.getElementById('stepStage');
+    stage.innerHTML = '';
+
+    const footer = document.getElementById('stepActionStrip');
+    const indicator = document.getElementById('stepIndicator');
+    const hint = document.getElementById('stepHint');
+    const dotsHolder = document.getElementById('stepDots');
+    indicator.innerHTML = '';
+    dotsHolder.innerHTML = '';
+
+    if (step.mechanic === 'celebrate') {
+      footer.style.display = 'none';
+      return buildCelebrateStage(stage, step);
     }
 
-    function crackEgg(eggData) {
-      if (eggData.stage >= 2) return; // already finished — ignore extra taps
-      eggData.stage += 1;
+    footer.style.display = '';
+    const indicatorSlot = INDICATOR_SLOT[step.mechanic];
+    if (indicatorSlot) indicator.appendChild(createAsset(indicatorSlot, { alt: '' }));
+    hint.textContent = step.hint || '';
 
-      if (eggData.stage === 1) {
-        eggData.el.classList.add('is-cracked-1');
-        eggData.assetNode = updateAsset(eggData.assetNode, 'eggCracked', { alt: 'Cracked egg' });
-        gameAudio.playCrack();
-      } else {
-        eggData.el.classList.add('is-done');
-        gameAudio.playPlop();
-        const doneCount = eggs.filter((e) => e.stage >= 2).length;
-        setDots(dots, doneCount);
-        if (doneCount === 2) {
-          gameAudio.playStepComplete();
-          setTimeout(() => goTo('MILK'), 900);
+    const sceneFrame = document.createElement('div');
+    sceneFrame.className = 'scene-frame';
+    if (step.mechanic === 'dragCircle' || step.mechanic === 'smearCoverage') {
+      sceneFrame.classList.add('scene-frame--drag');
+    }
+    stage.appendChild(sceneFrame);
+
+    const scene = step.scene || {};
+    if (scene.idle) sceneFrame.appendChild(createScenePlate(scene.idle, { active: false, alt: '' }));
+    if (scene.active) sceneFrame.appendChild(createScenePlate(scene.active, { active: true, alt: '' }));
+
+    applyLayout(sceneFrame, step.layout);
+
+    const handler = MECHANICS[step.mechanic];
+    const onComplete = () => {
+      gameAudio.playStepComplete();
+      setTimeout(advanceStep, 850);
+    };
+    const mechanicCleanup = handler ? handler(sceneFrame, step, onComplete, dotsHolder) : null;
+
+    return () => {
+      if (mechanicCleanup) mechanicCleanup();
+    };
+  }
+
+  // ---- layout: optional recipe-supplied CSS custom-property overrides ----
+
+  const LAYOUT_VAR_MAP = {
+    hotspot: { left: '--hs-left', top: '--hs-top', width: '--hs-width', height: '--hs-height' },
+    meter: { right: '--meter-right', top: '--meter-top', width: '--meter-width', height: '--meter-height' },
+    items: { left: '--items-left', bottom: '--items-bottom', gap: '--items-gap' },
+    trail: { inset: '--trail-inset' },
+    motion: { left: '--motion-left', top: '--motion-top', width: '--motion-width' },
+    hint: { right: '--hint-right', top: '--hint-top', width: '--hint-width' },
+    panel: { left: '--panel-left', bottom: '--panel-bottom', width: '--panel-width' },
+    canvas: { left: '--canvas-left', top: '--canvas-top', width: '--canvas-width', height: '--canvas-height' },
+  };
+
+  function applyLayout(sceneFrame, layout) {
+    if (!layout) return;
+    Object.entries(layout).forEach(([groupKey, props]) => {
+      const varMap = LAYOUT_VAR_MAP[groupKey];
+      if (!varMap) return;
+      Object.entries(props).forEach(([propKey, val]) => {
+        const cssVar = varMap[propKey];
+        if (!cssVar) return;
+        sceneFrame.style.setProperty(cssVar, typeof val === 'number' ? `${val}%` : val);
+      });
+    });
+  }
+
+  // =========================================================================
+  // tapCounter — tap each of N items M times (eggs, scoops, cheese, herbs...)
+  // =========================================================================
+  MECHANICS.tapCounter = function (sceneFrame, step, onComplete, dotsHolder) {
+    const { items, tapsPerItem, layout = 'row', stages, itemGlyph, itemTint, sfx = {} } = step.params;
+
+    const container = document.createElement('div');
+    container.className = `scene-items scene-items--${layout}`;
+    sceneFrame.appendChild(container);
+
+    const useDots = items > 1;
+    const dots = buildDots('stepDots', useDots ? items : tapsPerItem);
+    setDots(dots, 0);
+
+    const tokens = [];
+    for (let i = 0; i < items; i++) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'scene-item grounded-shadow';
+      button.setAttribute('aria-label', `Tap ${tapsPerItem > 1 ? tapsPerItem + ' times' : ''}`);
+
+      if (layout === 'scatter') {
+        const x = 14 + Math.random() * 72;
+        const y = 16 + Math.random() * 56;
+        button.style.setProperty('--item-x', `${x}%`);
+        button.style.setProperty('--item-y', `${y}%`);
+      }
+
+      let assetNode = null;
+      if (stages && stages.length) {
+        assetNode = createAsset(stages[0].slot, { alt: '', extraClass: 'egg-glyph' });
+        button.appendChild(assetNode);
+        if (tapsPerItem > 1) {
+          const token = document.createElement('div');
+          token.className = 'item-token';
+          button.appendChild(token);
         }
+      } else {
+        const glyph = document.createElement('span');
+        glyph.className = `item-glyph${itemTint ? ` tint-${itemTint}` : ''}`;
+        glyph.textContent = itemGlyph || '🍽️';
+        button.appendChild(glyph);
+      }
+
+      container.appendChild(button);
+      const data = { el: button, assetNode, taps: 0 };
+      tokens.push(data);
+    }
+
+    function onTapItem(data) {
+      if (data.taps >= tapsPerItem) return;
+      data.taps += 1;
+
+      const isLast = data.taps >= tapsPerItem;
+      if (data.assetNode && stages && stages.length > 1) {
+        const stageIndex = Math.min(data.taps, stages.length - 1);
+        data.assetNode = updateAsset(data.assetNode, stages[stageIndex].slot, { alt: '' });
+      }
+      data.el.classList.toggle('is-stage-1', !isLast && data.taps >= 1);
+      data.el.classList.toggle('is-done', isLast);
+
+      if (isLast && sfx.lastTap) gameAudio[sfx.lastTap]();
+      else if (sfx.tap) gameAudio[sfx.tap]();
+
+      if (useDots) {
+        const doneCount = tokens.filter((t) => t.taps >= tapsPerItem).length;
+        setDots(dots, doneCount);
+        if (doneCount === items) onComplete();
+      } else {
+        setDots(dots, data.taps);
+        if (data.taps >= tapsPerItem) onComplete();
       }
     }
 
-    const offTarget = attachOffTargetHint(screens.EGGS, '.egg', () => eggs.filter((egg) => egg.stage < 2).map((egg) => egg.el));
+    const listeners = tokens.map((data) => {
+      const fn = (e) => { e.preventDefault(); onTapItem(data); };
+      data.el.addEventListener('pointerdown', fn);
+      return fn;
+    });
+
+    const offTarget = attachOffTargetHint(sceneFrame, '.scene-item', () =>
+      tokens.filter((t) => t.taps < tapsPerItem).map((t) => t.el));
 
     return () => {
-      eggs.forEach((eggData) => eggData._cleanup());
+      tokens.forEach((data, i) => data.el.removeEventListener('pointerdown', listeners[i]));
       offTarget();
     };
   };
 
   // =========================================================================
-  // MILK — hold the carton; the bowl meter fills while held and pauses
-  // (never resets) if released early. Full meter -> auto-advance to STIR.
+  // holdFill — hold a hotspot; a meter fills and pauses (never resets) if
+  // released early (milk, batter, broth, bake, simmer, lime...).
   // =========================================================================
-  SETUPS.MILK = function () {
-    const carton = document.getElementById('milkCarton');
-    const scene = carton.closest('.scene-frame');
-    const fillBar = document.getElementById('milkFillBar');
-    fillBar.style.height = `${Math.round(game.milkFill * 100)}%`;
+  MECHANICS.holdFill = function (sceneFrame, step, onComplete) {
+    const { holdSeconds, sfx = {}, meterTint } = step.params;
 
+    const hotspot = document.createElement('button');
+    hotspot.type = 'button';
+    hotspot.className = 'scene-hotspot';
+    hotspot.setAttribute('aria-label', step.hint || 'Hold');
+    const ring = document.createElement('span');
+    ring.className = 'hold-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    hotspot.appendChild(ring);
+    sceneFrame.appendChild(hotspot);
+
+    const meter = document.createElement('div');
+    meter.className = 'fill-meter';
+    meter.setAttribute('aria-hidden', 'true');
+    const bar = document.createElement('div');
+    bar.className = `fill-meter-bar${meterTint === 'butter' ? ' fill-meter-bar--butter' : ''}`;
+    meter.appendChild(bar);
+    sceneFrame.appendChild(meter);
+
+    let fill = 0;
     let holding = false;
     let advanced = false;
     let rafId = null;
     let lastTime = null;
-    let stopPour = null;
+    let stopLoop = null;
+
+    function applyFill() { bar.style.height = `${Math.round(fill * 100)}%`; }
 
     function tick(time) {
       if (!holding) return;
@@ -321,14 +467,13 @@
       const dt = (time - lastTime) / 1000;
       lastTime = time;
 
-      game.milkFill = Math.min(1, game.milkFill + dt / MILK_HOLD_SECONDS);
-      fillBar.style.height = `${Math.round(game.milkFill * 100)}%`;
+      fill = Math.min(1, fill + dt / holdSeconds);
+      applyFill();
 
-      if (game.milkFill >= 1 && !advanced) {
+      if (fill >= 1 && !advanced) {
         advanced = true;
         stopHolding();
-        gameAudio.playStepComplete();
-        setTimeout(() => goTo('STIR'), 850);
+        onComplete();
         return;
       }
       rafId = requestAnimationFrame(tick);
@@ -338,65 +483,81 @@
       if (advanced || holding) return;
       holding = true;
       lastTime = null;
-      carton.classList.add('is-holding');
-      scene.classList.add('is-holding');
-      stopPour = gameAudio.playPourLoop();
+      hotspot.classList.add('is-holding');
+      sceneFrame.classList.add('is-engaged');
+      if (sfx.loop) stopLoop = gameAudio[sfx.loop]();
       rafId = requestAnimationFrame(tick);
     }
 
     function stopHolding() {
       if (!holding) return;
       holding = false;
-      carton.classList.remove('is-holding');
-      scene.classList.remove('is-holding');
+      hotspot.classList.remove('is-holding');
+      sceneFrame.classList.remove('is-engaged');
       if (rafId) cancelAnimationFrame(rafId);
-      if (stopPour) { stopPour(); stopPour = null; }
+      if (stopLoop) { stopLoop(); stopLoop = null; }
     }
 
     function onPointerDown(e) {
       e.preventDefault();
-      if (!advanced) safeSetPointerCapture(scene, e.pointerId);
+      if (!advanced) safeSetPointerCapture(sceneFrame, e.pointerId);
       startHolding();
     }
     function onPointerUp() { stopHolding(); }
 
-    scene.addEventListener('pointerdown', onPointerDown);
-    scene.addEventListener('pointerup', onPointerUp);
-    scene.addEventListener('pointercancel', onPointerUp);
-    scene.addEventListener('pointerleave', onPointerUp);
+    sceneFrame.addEventListener('pointerdown', onPointerDown);
+    sceneFrame.addEventListener('pointerup', onPointerUp);
+    sceneFrame.addEventListener('pointercancel', onPointerUp);
+    sceneFrame.addEventListener('pointerleave', onPointerUp);
 
     return () => {
       stopHolding();
-      scene.removeEventListener('pointerdown', onPointerDown);
-      scene.removeEventListener('pointerup', onPointerUp);
-      scene.removeEventListener('pointercancel', onPointerUp);
-      scene.removeEventListener('pointerleave', onPointerUp);
+      sceneFrame.removeEventListener('pointerdown', onPointerDown);
+      sceneFrame.removeEventListener('pointerup', onPointerUp);
+      sceneFrame.removeEventListener('pointercancel', onPointerUp);
+      sceneFrame.removeEventListener('pointerleave', onPointerUp);
     };
   };
 
   // =========================================================================
-  // STIR — drag a finger in a rough circle around the bowl. We track the
-  // running angle around the bowl's center and count a "turn" whenever the
-  // accumulated angle passes a full revolution (in either direction — this
-  // is meant to detect *rough* circular motion, not a precise, one-way
-  // circle). Need STIR_TARGET turns to move on.
+  // dragCircle — swirl a finger in a rough circle around the scene (stir,
+  // knead, swirl whipped cream...). Counts a "turn" every full revolution.
   // =========================================================================
-  SETUPS.STIR = function () {
-    const surface = document.getElementById('stirSurface');
-    const trail = document.getElementById('swirlTrail');
-    const spoon = document.getElementById('swirlSpoon');
-    const dots = buildDots('dotsStir', STIR_TARGET);
+  MECHANICS.dragCircle = function (sceneFrame, step, onComplete) {
+    const { turns, sfx = {}, spoon, glyph } = step.params;
+    const DEAD_ZONE_FRAC = 0.16;
+
+    const motion = document.createElement('div');
+    motion.className = 'stir-motion';
+    motion.setAttribute('aria-hidden', 'true');
+    sceneFrame.appendChild(motion);
+
+    const trail = document.createElement('div');
+    trail.className = 'swirl-trail';
+    trail.setAttribute('aria-hidden', 'true');
+    sceneFrame.appendChild(trail);
+
+    const tool = document.createElement(spoon && spoon.slot ? 'div' : 'span');
+    tool.className = 'swirl-spoon';
+    tool.setAttribute('aria-hidden', 'true');
+    if (spoon && spoon.slot) {
+      tool.appendChild(createAsset(spoon.slot, { alt: '' }));
+    } else {
+      tool.textContent = glyph || '🥄';
+    }
+    sceneFrame.appendChild(tool);
+
+    const dots = buildDots('stepDots', turns);
     setDots(dots, 0);
 
-    const DEAD_ZONE_FRAC = 0.16; // ignore motion too close to the center (jitter)
     let pointerId = null;
     let lastAngle = null;
     let accumAngle = 0;
-    let turns = 0;
+    let turnCount = 0;
     let advanced = false;
 
-    function bowlGeometry() {
-      const rect = surface.getBoundingClientRect();
+    function geometry() {
+      const rect = sceneFrame.getBoundingClientRect();
       return {
         cx: rect.left + rect.width / 2,
         cy: rect.top + rect.height / 2,
@@ -405,36 +566,36 @@
       };
     }
 
-    function placeSpoon(clientX, clientY, rect) {
-      spoon.style.left = `${clientX - rect.left}px`;
-      spoon.style.top = `${clientY - rect.top}px`;
+    function placeTool(clientX, clientY, rect) {
+      tool.style.left = `${clientX - rect.left}px`;
+      tool.style.top = `${clientY - rect.top}px`;
     }
 
     function onPointerDown(e) {
       e.preventDefault();
       if (advanced) return;
       pointerId = e.pointerId;
-      safeSetPointerCapture(surface, pointerId);
-      const geo = bowlGeometry();
+      safeSetPointerCapture(sceneFrame, pointerId);
+      const geo = geometry();
       const dist = Math.hypot(e.clientX - geo.cx, e.clientY - geo.cy);
       lastAngle = dist > geo.radius * DEAD_ZONE_FRAC
         ? Math.atan2(e.clientY - geo.cy, e.clientX - geo.cx)
         : null;
       accumAngle = 0;
-      surface.classList.add('is-stirring');
+      sceneFrame.classList.add('is-engaged');
       trail.classList.add('is-active');
-      spoon.classList.add('is-visible');
-      placeSpoon(e.clientX, e.clientY, geo.rect);
+      tool.classList.add('is-visible');
+      placeTool(e.clientX, e.clientY, geo.rect);
     }
 
     function onPointerMove(e) {
       if (e.pointerId !== pointerId || advanced) return;
-      const geo = bowlGeometry();
-      placeSpoon(e.clientX, e.clientY, geo.rect);
+      const geo = geometry();
+      placeTool(e.clientX, e.clientY, geo.rect);
 
       const dist = Math.hypot(e.clientX - geo.cx, e.clientY - geo.cy);
       if (dist < geo.radius * DEAD_ZONE_FRAC) {
-        lastAngle = null; // too close to center — wait until they swing back out
+        lastAngle = null;
         return;
       }
       const angle = Math.atan2(e.clientY - geo.cy, e.clientX - geo.cx);
@@ -452,16 +613,14 @@
     }
 
     function registerTurn() {
-      turns = clampCount(turns + 1);
-      game.stirTurns = turns;
-      gameAudio.playSwirl();
-      setDots(dots, Math.min(turns, STIR_TARGET));
+      turnCount = clampCount(turnCount + 1);
+      if (sfx.turn) gameAudio[sfx.turn]();
+      setDots(dots, Math.min(turnCount, turns));
 
-      if (turns >= STIR_TARGET && !advanced) {
+      if (turnCount >= turns && !advanced) {
         advanced = true;
-        gameAudio.playStepComplete();
         endStroke();
-        setTimeout(() => goTo('BATTER'), 850);
+        onComplete();
       }
     }
 
@@ -469,9 +628,9 @@
       pointerId = null;
       lastAngle = null;
       accumAngle = 0;
-      surface.classList.remove('is-stirring');
+      sceneFrame.classList.remove('is-engaged');
       trail.classList.remove('is-active');
-      spoon.classList.remove('is-visible');
+      tool.classList.remove('is-visible');
     }
 
     function onPointerUp(e) {
@@ -479,109 +638,42 @@
       endStroke();
     }
 
-    surface.addEventListener('pointerdown', onPointerDown);
-    surface.addEventListener('pointermove', onPointerMove);
-    surface.addEventListener('pointerup', onPointerUp);
-    surface.addEventListener('pointercancel', onPointerUp);
+    sceneFrame.addEventListener('pointerdown', onPointerDown);
+    sceneFrame.addEventListener('pointermove', onPointerMove);
+    sceneFrame.addEventListener('pointerup', onPointerUp);
+    sceneFrame.addEventListener('pointercancel', onPointerUp);
 
     return () => {
-      surface.removeEventListener('pointerdown', onPointerDown);
-      surface.removeEventListener('pointermove', onPointerMove);
-      surface.removeEventListener('pointerup', onPointerUp);
-      surface.removeEventListener('pointercancel', onPointerUp);
+      sceneFrame.removeEventListener('pointerdown', onPointerDown);
+      sceneFrame.removeEventListener('pointermove', onPointerMove);
+      sceneFrame.removeEventListener('pointerup', onPointerUp);
+      sceneFrame.removeEventListener('pointercancel', onPointerUp);
     };
   };
 
   // =========================================================================
-  // BATTER — hold the ladle over the pan; the batter pool grows while held
-  // and pauses (never shrinks) if released early. Full size -> FLIP.
+  // swipeGesture — swipe in a direction to flip/lift/pop. A swipe that isn't
+  // decisive enough just gives a gentle wobble — try again.
   // =========================================================================
-  SETUPS.BATTER = function () {
-    const ladle = document.getElementById('batterLadle');
-    const scene = ladle.closest('.scene-frame');
-    const fillBar = document.getElementById('batterFillBar');
+  function checkSwipe(dx, dy, direction, threshold) {
+    if (direction === 'down') return dy >= threshold && Math.abs(dy) > Math.abs(dx);
+    if (direction === 'left') return dx <= -threshold && Math.abs(dx) > Math.abs(dy);
+    if (direction === 'right') return dx >= threshold && Math.abs(dx) > Math.abs(dy);
+    return dy <= -threshold && Math.abs(dy) > Math.abs(dx); // 'up' default
+  }
 
-    function applyPoolSize() {
-      fillBar.style.height = `${Math.round(game.batterSize * 100)}%`;
-    }
-    applyPoolSize();
+  MECHANICS.swipeGesture = function (sceneFrame, step, onComplete) {
+    const { direction = 'up', threshold = 56, label = 'Up', sfx = {} } = step.params;
 
-    let holding = false;
-    let advanced = false;
-    let rafId = null;
-    let lastTime = null;
-    let stopSizzle = null;
-
-    function tick(time) {
-      if (!holding) return;
-      if (lastTime == null) lastTime = time;
-      const dt = (time - lastTime) / 1000;
-      lastTime = time;
-
-      game.batterSize = Math.min(1, game.batterSize + dt / BATTER_HOLD_SECONDS);
-      applyPoolSize();
-
-      if (game.batterSize >= 1 && !advanced) {
-        advanced = true;
-        stopHolding();
-        gameAudio.playStepComplete();
-        setTimeout(() => goTo('FLIP'), 850);
-        return;
-      }
-      rafId = requestAnimationFrame(tick);
-    }
-
-    function startHolding() {
-      if (advanced || holding) return;
-      holding = true;
-      lastTime = null;
-      ladle.classList.add('is-holding');
-      scene.classList.add('is-holding');
-      stopSizzle = gameAudio.playSizzleLoop();
-      rafId = requestAnimationFrame(tick);
-    }
-    function stopHolding() {
-      if (!holding) return;
-      holding = false;
-      ladle.classList.remove('is-holding');
-      scene.classList.remove('is-holding');
-      if (rafId) cancelAnimationFrame(rafId);
-      if (stopSizzle) { stopSizzle(); stopSizzle = null; }
-    }
-
-    function onPointerDown(e) {
-      e.preventDefault();
-      if (!advanced) safeSetPointerCapture(scene, e.pointerId);
-      startHolding();
-    }
-    function onPointerUp() { stopHolding(); }
-
-    scene.addEventListener('pointerdown', onPointerDown);
-    scene.addEventListener('pointerup', onPointerUp);
-    scene.addEventListener('pointercancel', onPointerUp);
-    scene.addEventListener('pointerleave', onPointerUp);
-
-    return () => {
-      stopHolding();
-      scene.removeEventListener('pointerdown', onPointerDown);
-      scene.removeEventListener('pointerup', onPointerUp);
-      scene.removeEventListener('pointercancel', onPointerUp);
-      scene.removeEventListener('pointerleave', onPointerUp);
-    };
-  };
-
-  // =========================================================================
-  // FLIP — swipe up over the pan to flip the pancake from raw to golden.
-  // A swipe that isn't "up enough" just gives a gentle wobble — try again.
-  // =========================================================================
-  SETUPS.FLIP = function () {
-    const wrap = document.getElementById('flipPanWrap');
-    const hint = document.getElementById('swipeHint');
+    const hint = document.createElement('div');
+    hint.className = 'swipe-hint';
+    hint.textContent = label;
+    hint.setAttribute('aria-hidden', 'true');
+    sceneFrame.appendChild(hint);
 
     let pointerId = null;
     let startX = 0;
     let startY = 0;
-    let attempts = 0;
     let advanced = false;
 
     function onPointerDown(e) {
@@ -590,7 +682,7 @@
       pointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
-      safeSetPointerCapture(wrap, pointerId);
+      safeSetPointerCapture(sceneFrame, pointerId);
     }
 
     function onPointerUp(e) {
@@ -600,12 +692,15 @@
 
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      attempts = clampCount(attempts + 1);
 
-      if (dy <= -SWIPE_UP_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-        doFlip();
+      if (checkSwipe(dx, dy, direction, threshold)) {
+        advanced = true;
+        if (sfx.gesture) gameAudio[sfx.gesture]();
+        hint.style.opacity = '0';
+        sceneFrame.classList.add('is-engaged');
+        setTimeout(onComplete, 500);
       } else {
-        wobble(wrap);
+        wobble(sceneFrame);
       }
     }
 
@@ -613,41 +708,285 @@
       if (e.pointerId === pointerId) pointerId = null;
     }
 
-    function doFlip() {
-      advanced = true;
-      game.flipped = true;
-      hint.style.opacity = '0';
-      gameAudio.playFlipWhoosh();
-      wrap.classList.add('is-flipping');
-
-      setTimeout(() => {
-        gameAudio.playStepComplete();
-      }, 320);
-      setTimeout(() => wrap.classList.remove('is-flipping'), 650);
-      setTimeout(() => goTo('CELEBRATE'), 1650);
-    }
-
-    wrap.addEventListener('pointerdown', onPointerDown);
-    wrap.addEventListener('pointerup', onPointerUp);
-    wrap.addEventListener('pointercancel', onPointerCancel);
+    sceneFrame.addEventListener('pointerdown', onPointerDown);
+    sceneFrame.addEventListener('pointerup', onPointerUp);
+    sceneFrame.addEventListener('pointercancel', onPointerCancel);
 
     return () => {
-      wrap.removeEventListener('pointerdown', onPointerDown);
-      wrap.removeEventListener('pointerup', onPointerUp);
-      wrap.removeEventListener('pointercancel', onPointerCancel);
+      sceneFrame.removeEventListener('pointerdown', onPointerDown);
+      sceneFrame.removeEventListener('pointerup', onPointerUp);
+      sceneFrame.removeEventListener('pointercancel', onPointerCancel);
     };
   };
 
   // =========================================================================
-  // CELEBRATE — confetti, fanfare, finished pancake stack, and a big
-  // friendly "play again" button that loops back to recipe select.
+  // smearCoverage — drag to paint a color over the scene until enough of it
+  // is covered (spreading sauce, frosting, sprinkling...). This is the
+  // "coloring" mechanic.
   // =========================================================================
-  SETUPS.CELEBRATE = function () {
-    const field = document.getElementById('confettiField');
-    const playAgain = document.getElementById('playAgainButton');
+  MECHANICS.smearCoverage = function (sceneFrame, step, onComplete) {
+    const { threshold = 0.75, color = '#ff9fc2', sfx = {} } = step.params;
 
-    field.innerHTML = '';
-    const glyphs = ['🎉', '🎊', '⭐', '✨', '🥞', '💗'];
+    const canvas = document.createElement('canvas');
+    canvas.className = 'smear-canvas';
+    sceneFrame.appendChild(canvas);
+
+    const progress = document.createElement('div');
+    progress.className = 'smear-progress';
+    progress.setAttribute('aria-hidden', 'true');
+    const bar = document.createElement('div');
+    bar.className = 'smear-progress-bar';
+    progress.appendChild(bar);
+    sceneFrame.appendChild(progress);
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const cssW = rect.width || 1;
+    const cssH = rect.height || 1;
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    ctx.scale(dpr, dpr);
+
+    const BRUSH_RADIUS = Math.max(18, Math.min(cssW, cssH) * 0.09);
+    let pointerId = null;
+    let lastX = null;
+    let lastY = null;
+    let advanced = false;
+    let sampleScheduled = false;
+
+    function paintDot(x, y) {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(x, y, BRUSH_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function paintStroke(x0, y0, x1, y1) {
+      const dist = Math.hypot(x1 - x0, y1 - y0);
+      const steps = Math.max(1, Math.ceil(dist / (BRUSH_RADIUS * 0.5)));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        paintDot(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
+      }
+    }
+
+    function scheduleSample() {
+      if (sampleScheduled || advanced) return;
+      sampleScheduled = true;
+      setTimeout(() => {
+        sampleScheduled = false;
+        sampleCoverage();
+      }, 120);
+    }
+
+    function sampleCoverage() {
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const stride = 4 * 4; // sample every 4th pixel for speed
+      let painted = 0;
+      let total = 0;
+      for (let i = 3; i < data.length; i += stride) {
+        total += 1;
+        if (data[i] > 40) painted += 1;
+      }
+      const coverage = total ? painted / total : 0;
+      bar.style.width = `${Math.min(100, Math.round((coverage / threshold) * 100))}%`;
+
+      if (coverage >= threshold && !advanced) {
+        advanced = true;
+        onComplete();
+      }
+    }
+
+    function toCanvasPoint(e) {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    function onPointerDown(e) {
+      e.preventDefault();
+      if (advanced) return;
+      pointerId = e.pointerId;
+      safeSetPointerCapture(canvas, pointerId);
+      const p = toCanvasPoint(e);
+      lastX = p.x; lastY = p.y;
+      paintDot(p.x, p.y);
+      if (sfx.stroke) gameAudio[sfx.stroke]();
+      scheduleSample();
+    }
+
+    function onPointerMove(e) {
+      if (e.pointerId !== pointerId || advanced) return;
+      const p = toCanvasPoint(e);
+      paintStroke(lastX, lastY, p.x, p.y);
+      lastX = p.x; lastY = p.y;
+      scheduleSample();
+    }
+
+    function onPointerUp(e) {
+      if (e.pointerId !== pointerId) return;
+      pointerId = null;
+    }
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+    };
+  };
+
+  // =========================================================================
+  // colorMatch — tap the swatch that matches the prompt color, round after
+  // round. This is the "matching colors" mechanic.
+  // =========================================================================
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  MECHANICS.colorMatch = function (sceneFrame, step, onComplete, dotsHolder) {
+    const { rounds, sfx = {} } = step.params;
+
+    const panel = document.createElement('div');
+    panel.className = 'colormatch-panel';
+    sceneFrame.appendChild(panel);
+
+    const prompt = document.createElement('div');
+    prompt.className = 'colormatch-prompt';
+    const promptSwatch = document.createElement('span');
+    promptSwatch.className = 'colormatch-prompt-swatch';
+    const promptLabel = document.createElement('span');
+    prompt.append(promptSwatch, promptLabel);
+    panel.appendChild(prompt);
+
+    const optionsRow = document.createElement('div');
+    optionsRow.className = 'colormatch-options';
+    panel.appendChild(optionsRow);
+
+    const palette = shuffled(rounds);
+    const dots = buildDots('stepDots', rounds.length);
+    setDots(dots, 0);
+
+    let roundIndex = 0;
+    let advanced = false;
+    let optionButtons = [];
+    let optionListeners = [];
+
+    function clearOptions() {
+      optionButtons.forEach((btn, i) => btn.removeEventListener('pointerdown', optionListeners[i]));
+      optionsRow.innerHTML = '';
+      optionButtons = [];
+      optionListeners = [];
+    }
+
+    function renderRound() {
+      const target = rounds[roundIndex];
+      promptSwatch.style.background = target.color;
+      promptLabel.textContent = `Match the ${target.label}`;
+
+      clearOptions();
+      shuffled(palette).forEach((opt) => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'colormatch-swatch';
+        swatch.style.background = opt.color;
+        swatch.setAttribute('aria-label', opt.label);
+        const onPick = (e) => {
+          e.preventDefault();
+          if (advanced) return;
+          if (opt.color === target.color) {
+            if (sfx.correct) gameAudio[sfx.correct]();
+            roundIndex += 1;
+            setDots(dots, roundIndex);
+            if (roundIndex >= rounds.length) {
+              advanced = true;
+              clearOptions();
+              onComplete();
+            } else {
+              renderRound();
+            }
+          } else {
+            if (sfx.wrong) gameAudio[sfx.wrong]();
+            wobble(swatch);
+          }
+        };
+        swatch.addEventListener('pointerdown', onPick);
+        optionButtons.push(swatch);
+        optionListeners.push(onPick);
+        optionsRow.appendChild(swatch);
+      });
+    }
+
+    renderRound();
+
+    return () => { clearOptions(); };
+  };
+
+  // =========================================================================
+  // celebrate — confetti, fanfare, the finished dish, and Play Again.
+  // =========================================================================
+  function buildCelebrateStage(stage, step) {
+    const { rewardGlyph, rewardTint = 'pink', rewardLabel = 'Yum!', rewardSlot } = step.params;
+
+    const celebrateStage = document.createElement('div');
+    celebrateStage.className = 'celebrate-stage';
+    stage.appendChild(celebrateStage);
+
+    const sceneFrame = document.createElement('div');
+    sceneFrame.className = 'scene-frame scene-frame--celebrate';
+    celebrateStage.appendChild(sceneFrame);
+
+    const scene = step.scene || {};
+    if (scene.idle) sceneFrame.appendChild(createScenePlate(scene.idle, { active: false, alt: '' }));
+
+    const badge = document.createElement('div');
+    badge.className = 'reward-badge';
+    if (rewardSlot) {
+      badge.appendChild(createAsset(rewardSlot, { alt: rewardLabel }));
+    } else {
+      badge.classList.add('asset--placeholder', `tint-${rewardTint}`);
+      badge.textContent = rewardGlyph || '🎉';
+      badge.setAttribute('aria-hidden', 'true');
+    }
+    sceneFrame.appendChild(badge);
+
+    const congrats = document.createElement('div');
+    congrats.className = 'counter-congrats';
+    const stars = document.createElement('div');
+    stars.className = 'stars';
+    stars.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('p');
+    label.className = 'reward-label';
+    label.textContent = rewardLabel;
+    const playAgain = document.createElement('button');
+    playAgain.type = 'button';
+    playAgain.className = 'big-button big-button--again';
+    playAgain.id = 'playAgainButton';
+    playAgain.setAttribute('aria-label', 'Play again');
+    const playAgainSpan = document.createElement('span');
+    playAgainSpan.setAttribute('aria-hidden', 'true');
+    playAgainSpan.textContent = 'Play again';
+    playAgain.appendChild(playAgainSpan);
+    congrats.append(stars, label, playAgain);
+    sceneFrame.appendChild(congrats);
+
+    const field = document.createElement('div');
+    field.className = 'confetti-field';
+    field.setAttribute('aria-hidden', 'true');
+    celebrateStage.appendChild(field);
+
+    const glyphs = ['🎉', '🎊', '⭐', '✨', rewardGlyph || '🎉', '💗'];
     for (let i = 0; i < 18; i++) {
       const piece = document.createElement('span');
       piece.className = 'confetti-piece';
@@ -671,11 +1010,11 @@
 
     return () => {
       playAgain.removeEventListener('pointerdown', onPlayAgain);
-      field.innerHTML = '';
     };
-  };
+  }
 
   // ---- boot ---------------------------------------------------------------
+  applyCharacterName();
   setupChromeButtons();
   goTo('START');
 

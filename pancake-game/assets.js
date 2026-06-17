@@ -1,11 +1,19 @@
 // ===========================================================================
-// assets.js — Named asset slots with automatic placeholder fallback.
+// assets.js — Named asset slots with automatic placeholder fallback, plus
+// character-aware image resolution.
 //
 // HOW TO SWAP IN REAL ART:
 //   Drop an illustrated PNG/WebP into assets/images/ using the filename
 //   listed below for the slot you want to replace (see assets/README.md).
 //   Nothing else needs to change — createAsset() tries to load the real
 //   file first and only shows the pastel placeholder if it 404s.
+//
+// CHARACTER OVERRIDES:
+//   If characters.js has set an ACTIVE_CHARACTER other than the default,
+//   every image lookup tries assets/images/characters/<folder>/<file>
+//   first and silently falls back to the shared assets/images/<file> (and
+//   finally to the emoji placeholder) if that doesn't exist. See
+//   characters.js for how a per-customer character build is configured.
 // ===========================================================================
 
 const ASSET_FILES = {
@@ -33,7 +41,6 @@ const ASSET_FILES = {
   holdIndicator: 'hold_indicator.png',
   dragIndicator: 'drag_indicator.png',
   starEmpty: 'star_empty.png',
-  countertop: 'countertop.png',
 };
 
 // Placeholder look for each slot: an emoji glyph + pastel background tint.
@@ -64,8 +71,37 @@ const PLACEHOLDER_LOOK = {
   holdIndicator: { glyph: '✋', tint: 'pink' },
   dragIndicator: { glyph: '🔄', tint: 'pink' },
   starEmpty: { glyph: '✨', tint: 'pink' },
-  countertop: { glyph: '🪵', tint: 'cream' },
 };
+
+/**
+ * Build the ordered list of candidate URLs for an image filename: the
+ * active character's own folder first (if one is set), then the shared
+ * default path. loadImageWithFallback() walks this list on each error.
+ */
+function resolveImageCandidates(file) {
+  const candidates = [];
+  if (typeof ACTIVE_CHARACTER !== 'undefined' && ACTIVE_CHARACTER && ACTIVE_CHARACTER.id !== DEFAULT_CHARACTER_ID) {
+    candidates.push(`assets/images/characters/${ACTIVE_CHARACTER.folder}/${file}`);
+  }
+  candidates.push(`assets/images/${file}`);
+  return candidates;
+}
+
+/** Try each candidate URL for `file` in turn; call onAllFailed() if every one 404s. */
+function loadImageWithFallback(img, file, onAllFailed) {
+  const candidates = resolveImageCandidates(file);
+  let i = 0;
+  function tryNext() {
+    if (i >= candidates.length) {
+      img.removeEventListener('error', tryNext);
+      if (onAllFailed) onAllFailed();
+      return;
+    }
+    img.src = candidates[i++];
+  }
+  img.addEventListener('error', tryNext);
+  tryNext();
+}
 
 /**
  * Build a DOM node for a named asset slot.
@@ -99,17 +135,55 @@ function createAsset(slotName, opts = {}) {
 
   const img = document.createElement('img');
   img.className = 'asset-img';
-  img.src = `assets/images/${file}`;
   img.alt = alt;
   img.draggable = false;
   img.decoding = 'async';
-  img.addEventListener('error', () => {
+  wrapper.appendChild(img);
+  loadImageWithFallback(img, file, () => {
     img.remove();
     showPlaceholder();
-  }, { once: true });
-  wrapper.appendChild(img);
+  });
 
   return wrapper;
+}
+
+/**
+ * Build a scene-plate node (full illustrated background for a recipe step).
+ * Same fallback philosophy as createAsset(), but returns a node meant to be
+ * absolutely positioned inside a .scene-frame: a real <img class="scene-plate">
+ * if `stage.file` loads, otherwise a tinted placeholder panel with a big glyph.
+ *
+ * @param {{ file?: string, glyph?: string, tint?: string }} stage
+ * @param {{ active?: boolean, alt?: string }} [opts]
+ */
+function createScenePlate(stage, opts = {}) {
+  const { active = false, alt = '' } = opts;
+  const glyph = (stage && stage.glyph) || '🍽️';
+  const tint = (stage && stage.tint) || 'pink';
+  const activeClass = active ? ' scene-plate--active' : '';
+
+  const buildPlaceholder = () => {
+    const ph = document.createElement('div');
+    ph.className = `scene-plate scene-plate--placeholder tint-${tint}${activeClass}`;
+    ph.textContent = glyph;
+    ph.setAttribute('aria-hidden', 'true');
+    return ph;
+  };
+
+  if (!stage || !stage.file) {
+    return buildPlaceholder();
+  }
+
+  const img = document.createElement('img');
+  img.className = `scene-plate${activeClass}`;
+  img.alt = alt;
+  img.setAttribute('aria-hidden', 'true');
+  img.draggable = false;
+  img.decoding = 'async';
+  loadImageWithFallback(img, stage.file, () => {
+    img.replaceWith(buildPlaceholder());
+  });
+  return img;
 }
 
 /**
