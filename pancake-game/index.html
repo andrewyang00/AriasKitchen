@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Aria Pancakes" />
+  <meta name="apple-mobile-web-app-title" content="Aria Kitchen" />
   <meta name="theme-color" content="#f75f9a" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" href="icons/icon-192.png" />
-  <title>Aria's Kitchen: Pancakes</title>
+  <title>Aria's Kitchen</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="bootLoading" class="boot-loading" aria-hidden="true">
+    <div class="boot-loading-spinner"></div>
+    <p>Loading your kitchen&hellip;</p>
+  </div>
+
   <div id="app">
     <button class="round-nav round-nav--home" type="button" aria-label="Go home">
       <span aria-hidden="true">Home</span>
@@ -27,8 +32,8 @@
         <div class="aria-portrait aria-portrait--hero" id="ariaStart"></div>
         <div class="start-copy">
           <p class="eyebrow">Little Chef</p>
-          <h1>Aria's Kitchen</h1>
-          <p class="subtitle">Pancake day</p>
+          <h1><span data-char-name>Aria</span>'s Kitchen</h1>
+          <p class="subtitle">Cooking time!</p>
           <button class="big-button pulse" id="startButton" type="button" aria-label="Start the game">
             <span aria-hidden="true">Play</span>
           </button>
@@ -42,178 +47,35 @@
           <div class="aria-portrait aria-portrait--select" id="ariaSelect"></div>
           <div>
             <p class="eyebrow">Choose a recipe</p>
-            <h2>What should Aria make?</h2>
+            <h2>What should <span data-char-name>Aria</span> make?</h2>
           </div>
         </div>
-        <div class="recipe-grid">
-          <button class="recipe-card recipe-card--active" id="recipePancakes" type="button" aria-label="Make pancakes">
-            <img src="assets/images/pancake_stack_reward.png" alt="" aria-hidden="true">
-            <span>Pancakes</span>
-            <b aria-hidden="true">Start</b>
-          </button>
-          <button class="recipe-card recipe-card--locked" data-locked="true" type="button" aria-label="Pizza coming soon">
-            <span class="recipe-illustration recipe-illustration--pizza" aria-hidden="true"></span>
-            <span>Pizza</span>
-            <b aria-hidden="true">Soon</b>
-          </button>
-          <button class="recipe-card recipe-card--locked" data-locked="true" type="button" aria-label="Smoothie coming soon">
-            <span class="recipe-illustration recipe-illustration--smoothie" aria-hidden="true"></span>
-            <span>Smoothie</span>
-            <b aria-hidden="true">Soon</b>
-          </button>
-        </div>
+        <div class="recipe-grid" id="recipeGrid"></div>
       </div>
     </section>
 
-    <section class="screen recipe-step" data-screen="EGGS" data-step="1">
+    <section class="screen recipe-step" data-screen="STEP">
       <div class="game-card">
         <header class="step-header">
-          <div class="step-badge">1</div>
+          <div class="step-badge" id="stepBadge"></div>
           <div>
-            <p class="eyebrow">Tap twice</p>
-            <h2>Crack 2 eggs</h2>
+            <p class="eyebrow" id="stepEyebrow"></p>
+            <h2 id="stepTitle"></h2>
           </div>
-          <div class="step-pips" aria-hidden="true"></div>
+          <div class="step-pips" id="stepPips" aria-hidden="true"></div>
         </header>
-        <div class="scene-frame scene-frame--eggs">
-          <img class="scene-plate" src="assets/images/scene_eggs_plate.png" alt="" aria-hidden="true">
-          <div class="egg-row" id="eggRow"></div>
-        </div>
-        <footer class="action-strip">
-          <img src="assets/images/tap_indicator.png" alt="" aria-hidden="true">
-          <span>Tap each egg twice</span>
-          <div class="progress-dots" id="dotsEggs" aria-hidden="true"></div>
+        <div class="step-stage" id="stepStage"></div>
+        <footer class="action-strip" id="stepActionStrip">
+          <div class="asset" id="stepIndicator"></div>
+          <span id="stepHint"></span>
+          <div class="progress-dots" id="stepDots" aria-hidden="true"></div>
         </footer>
-      </div>
-    </section>
-
-    <section class="screen recipe-step" data-screen="MILK" data-step="2">
-      <div class="game-card">
-        <header class="step-header">
-          <div class="step-badge">2</div>
-          <div>
-            <p class="eyebrow">Hold</p>
-            <h2>Pour milk</h2>
-          </div>
-          <div class="step-pips" aria-hidden="true"></div>
-        </header>
-        <div class="scene-frame scene-frame--milk">
-          <img class="scene-plate" src="assets/images/scene_milk_idle_plate.png" alt="" aria-hidden="true">
-          <img class="scene-plate scene-plate--active" src="assets/images/scene_milk_active_plate.png" alt="" aria-hidden="true">
-          <button class="scene-hotspot scene-hotspot--milk" id="milkCarton" type="button" aria-label="Hold to pour milk">
-            <span class="hold-ring" aria-hidden="true"></span>
-          </button>
-          <div class="fill-meter" aria-hidden="true">
-            <div class="fill-meter-bar" id="milkFillBar"></div>
-          </div>
-        </div>
-        <footer class="action-strip">
-          <img src="assets/images/hold_indicator.png" alt="" aria-hidden="true">
-          <span>Hold to pour</span>
-        </footer>
-      </div>
-    </section>
-
-    <section class="screen recipe-step" data-screen="STIR" data-step="3">
-      <div class="game-card">
-        <header class="step-header">
-          <div class="step-badge">3</div>
-          <div>
-            <p class="eyebrow">Swirl</p>
-            <h2>Stir batter</h2>
-          </div>
-          <div class="step-pips" aria-hidden="true"></div>
-        </header>
-        <div class="scene-frame scene-frame--stir" id="stirSurface">
-          <img class="scene-plate" src="assets/images/scene_stir_plate.png" alt="" aria-hidden="true">
-          <img class="scene-plate scene-plate--active" src="assets/images/scene_stir_active_plate.png" alt="" aria-hidden="true">
-          <div class="stir-motion" aria-hidden="true"></div>
-          <div class="swirl-trail scene-swirl-trail" id="swirlTrail" aria-hidden="true"></div>
-          <img class="swirl-spoon" id="swirlSpoon" src="assets/images/spoon_wooden.png" alt="" aria-hidden="true">
-        </div>
-        <footer class="action-strip">
-          <img src="assets/images/drag_indicator.png" alt="" aria-hidden="true">
-          <span>Swirl three times</span>
-          <div class="progress-dots" id="dotsStir" aria-hidden="true"></div>
-        </footer>
-      </div>
-    </section>
-
-    <section class="screen recipe-step" data-screen="BATTER" data-step="4">
-      <div class="game-card">
-        <header class="step-header">
-          <div class="step-badge">4</div>
-          <div>
-            <p class="eyebrow">Hold</p>
-            <h2>Pour batter</h2>
-          </div>
-          <div class="step-pips" aria-hidden="true"></div>
-        </header>
-        <div class="scene-frame scene-frame--batter">
-          <img class="scene-plate" src="assets/images/scene_batter_idle_plate.png" alt="" aria-hidden="true">
-          <img class="scene-plate scene-plate--active" id="batterActivePlate" src="assets/images/scene_batter_active_plate.png" alt="" aria-hidden="true">
-          <button class="scene-hotspot scene-hotspot--batter" id="batterLadle" type="button" aria-label="Hold to pour batter onto the pan">
-            <span class="hold-ring" aria-hidden="true"></span>
-          </button>
-          <div class="fill-meter" aria-hidden="true">
-            <div class="fill-meter-bar fill-meter-bar--batter" id="batterFillBar"></div>
-          </div>
-        </div>
-        <footer class="action-strip">
-          <img src="assets/images/hold_indicator.png" alt="" aria-hidden="true">
-          <span>Hold to fill the pan</span>
-        </footer>
-      </div>
-    </section>
-
-    <section class="screen recipe-step" data-screen="FLIP" data-step="5">
-      <div class="game-card">
-        <header class="step-header">
-          <div class="step-badge">5</div>
-          <div>
-            <p class="eyebrow">Swipe up</p>
-            <h2>Flip pancake</h2>
-          </div>
-          <div class="step-pips" aria-hidden="true"></div>
-        </header>
-        <div class="scene-frame scene-frame--flip" id="flipPanWrap">
-          <img class="scene-plate" id="flipScenePlate" src="assets/images/scene_flip_idle_plate.png" alt="" aria-hidden="true">
-          <img class="scene-plate scene-plate--active" src="assets/images/scene_flip_plate.png" alt="" aria-hidden="true">
-          <div class="swipe-hint" id="swipeHint" aria-hidden="true">Up</div>
-        </div>
-        <footer class="action-strip">
-          <img src="assets/images/drag_indicator.png" alt="" aria-hidden="true">
-          <span>Swipe up to flip</span>
-        </footer>
-      </div>
-    </section>
-
-    <section class="screen recipe-step recipe-step--reward" data-screen="CELEBRATE" data-step="6">
-      <div class="game-card game-card--celebrate">
-        <header class="step-header">
-          <div class="step-badge">6</div>
-          <div>
-            <p class="eyebrow">Yummy pancake</p>
-            <h2>You did it!</h2>
-          </div>
-          <div class="step-pips" aria-hidden="true"></div>
-        </header>
-        <div class="celebrate-stage">
-          <div class="scene-frame scene-frame--celebrate">
-            <img class="scene-plate" src="assets/images/scene_celebrate_plate.png" alt="" aria-hidden="true">
-            <div class="counter-congrats">
-              <div class="stars" aria-hidden="true">Star Star Star</div>
-              <button class="big-button big-button--again" id="playAgainButton" type="button" aria-label="Play again">
-                <span aria-hidden="true">Home</span>
-              </button>
-            </div>
-          </div>
-          <div class="confetti-field" id="confettiField" aria-hidden="true"></div>
-        </div>
       </div>
     </section>
   </div>
 
+  <script src="characters.js"></script>
+  <script src="recipes.js"></script>
   <script src="assets.js"></script>
   <script src="audio.js"></script>
   <script src="app.js"></script>
