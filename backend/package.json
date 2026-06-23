@@ -1,0 +1,13 @@
+{
+  "name": "ariaskitchen-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-serve character-generation backend for Aria's Kitchen (Phase 2 skeleton). Zero npm dependencies on purpose -- see README.md.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -49,6 +49,33 @@ body {
   min-width: 320px;
 }
 
+.boot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, #fff7f0, var(--pink-soft));
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.boot-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 6px solid var(--pink-soft);
+  border-top-color: var(--pink-hot);
+  animation: boot-spin 800ms linear infinite;
+}
+
+@keyframes boot-spin {
+  to { transform: rotate(360deg); }
+}
+
 button {
   font: inherit;
 }

@@ -75,13 +75,21 @@ const PLACEHOLDER_LOOK = {
 
 /**
  * Build the ordered list of candidate URLs for an image filename: the
- * active character's own folder first (if one is set), then the shared
+ * active character's own art first (if one is set), then the shared
  * default path. loadImageWithFallback() walks this list on each error.
+ *
+ * The active character's art can live in one of two places: a local
+ * assets/images/characters/<folder>/ directory (the static dev re-skin
+ * workflow), or an off-origin self-serve backend (ACTIVE_CHARACTER.baseUrl,
+ * set by characters.js's resolveActiveCharacterAsync()) — baseUrl wins if
+ * both are somehow set, since a dynamically-resolved character has no local
+ * folder at all.
  */
 function resolveImageCandidates(file) {
   const candidates = [];
   if (typeof ACTIVE_CHARACTER !== 'undefined' && ACTIVE_CHARACTER && ACTIVE_CHARACTER.id !== DEFAULT_CHARACTER_ID) {
-    candidates.push(`assets/images/characters/${ACTIVE_CHARACTER.folder}/${file}`);
+    const base = ACTIVE_CHARACTER.baseUrl || (ACTIVE_CHARACTER.folder && `assets/images/characters/${ACTIVE_CHARACTER.folder}`);
+    if (base) candidates.push(`${base}/${file}`);
   }
   candidates.push(`assets/images/${file}`);
   return candidates;

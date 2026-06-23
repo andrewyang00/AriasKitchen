@@ -1018,9 +1018,17 @@
   }
 
   // ---- boot ---------------------------------------------------------------
-  applyCharacterName();
-  setupChromeButtons();
-  goTo('START');
+  // resolveActiveCharacterAsync() (characters.js) is a no-op unless the URL
+  // names a self-serve backend token, and never rejects -- but it's still
+  // wrapped in .catch() here as a last line of defense, since a stuck/thrown
+  // promise at boot would mean the game never starts.
+  Promise.resolve(resolveActiveCharacterAsync()).catch(() => {}).then(() => {
+    applyCharacterName();
+    setupChromeButtons();
+    goTo('START');
+    const bootLoading = document.getElementById('bootLoading');
+    if (bootLoading) bootLoading.remove();
+  });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
